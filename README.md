@@ -56,6 +56,16 @@ uvicorn app.main:app --reload
 ```
 
 
+- Run Database Migrations
+```
+alembic init migrations
+alembic revision --autogenerate -m "Initial migration"
+
+Configure alembic.ini to use your DATABASE_URL: Update the sqlalchemy.url in alembic.ini to point to your database.
+```
+alembic upgrade head
+```
+
 ## Folder Structure (Temporary)
 
 ``` 
