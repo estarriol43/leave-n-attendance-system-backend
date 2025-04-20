@@ -3,10 +3,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
-# Create the engine that will interact with the PostgreSQL database
-DATABASE_URL = settings.DATABASE_URL  # Fetch from config settings
 
 # Create the engine that will interact with the database
+DATABASE_URL = settings.DATABASE_URL  # Fetch from config settings
 engine = create_engine(DATABASE_URL)
 
 # Create a session maker that will be used to establish DB connections
