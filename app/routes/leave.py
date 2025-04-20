@@ -1,7 +1,7 @@
 # app/routes/leave.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.dependencies.db import get_db
+from app.database import get_db
 from app.crud.leave import create_leave_request
 from app.schemas.leave import LeaveRequestCreate
 

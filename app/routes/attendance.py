@@ -1,7 +1,7 @@
 # app/routes/attendance.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.dependencies.db import get_db
+from app.database import get_db
 from app.crud.attendance import create_attendance
 from app.schemas.attendance import AttendanceCreate
 

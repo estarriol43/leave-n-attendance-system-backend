@@ -8,7 +8,7 @@ The backend is modular, scalable, and follows clean architecture principles to s
 - **FastAPI**: Python web framework for building APIs.
 - **SQLAlchemy**: ORM for database operations.
 - **PostgreSQL**: Relational database to store leave, attendance, and user data.
-- **Uvicorn**: ASGI server to run the FastAPI application.
+- **Uvicorn**: ASGI (Asynchronize Service Gateway Interface) server to run the FastAPI application.
 - **Pydantic**: Data validation for API requests.
 - **Docker**: Containerization for easier deployment.
 - **Google Cloud Platform (GCP)**: For deployment (App Engine).
@@ -16,7 +16,7 @@ The backend is modular, scalable, and follows clean architecture principles to s
 
 ## Prerequisites
 Before you begin, ensure you have the following installed on your system:
-- **Python 3.7+**
+- **Python 3.8+**
 - **Docker** (optional, for containerization)
 - **PostgreSQL** (or Cloud SQL for GCP database management)
 - **Google Cloud SDK** (for deployment to GCP)
@@ -56,7 +56,7 @@ uvicorn app.main:app --reload
 ```
 
 
-## Folder Structure
+## Folder Structure (Temporary)
 
 ``` 
 leave-attendance-backend/
@@ -64,6 +64,7 @@ leave-attendance-backend/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                     # Entry point of FastAPI app
+│   ├── database.py                  # Database connection
 │   ├── models/                      # Database models
 │   │   ├── user.py
 │   │   ├── leave.py
@@ -76,8 +77,6 @@ leave-attendance-backend/
 │   │   ├── user.py
 │   │   ├── leave.py
 │   │   └── attendance.py
-│   ├── dependencies/                # Dependency injection (for DB session)
-│   │   └── db.py
 │   ├── routes/                      # API route definitions
 │   │   ├── auth.py
 │   │   ├── leave.py
@@ -90,7 +89,5 @@ leave-attendance-backend/
 │   └── .env                         # Environment variables
 ├── alembic.ini                      # Alembic configuration
 ├── migrations/                      # Database migrations
-├── requirements.txt                 # Project dependencies
-└── Dockerfile                       # Docker configuration for deployment
-
+└── requirements.txt                 # Project dependencies
 ```
