@@ -16,8 +16,8 @@ The backend is modular, scalable, and follows clean architecture principles to s
 
 ## Prerequisites
 Before you begin, ensure you have the following installed on your system:
-- **Python 3.8+**
-- **Docker** (optional, for containerization)
+- **Python 3.11**
+- **Docker**
 - **PostgreSQL** (or Cloud SQL for GCP database management)
 - **Google Cloud SDK** (for deployment to GCP)
 - **Git** (to clone the repository)
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 - Create Environment Variables
 Create a `.env` file in the root directory of the project to store environment-specific variables like the database URL and secret keys.
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/leave_attendance
+DATABASE_URL=postgresql://username:password@localhost:5432/yourdatabase
 JWT_SECRET=your-secret-key
 ```
 
@@ -56,12 +56,25 @@ uvicorn app.main:app --reload
 ```
 
 
-- Run Database Migrations
+- Run Unit-Tests (have not been written yet, but you can add them in the tests folder)
+
+
+- Run Docker Container
+To run the application in a Docker container, you need to build the Docker image and then run it. Here’s how you can do that:
+- Build the Docker image:
+```bash
+docker-compose up --build
+```
+After this, you will create two containers: one for the FastAPI application and another for PostgreSQL. 
+The FastAPI application will be accessible at `http://localhost:8000`.
+
+
+- Run Database Migrations (You can currently skip this step, as the database is already created in the docker-compose file)
 ```
 alembic init migrations
-alembic revision --autogenerate -m "Initial migration"
-
+```
 Configure alembic.ini to use your DATABASE_URL: Update the sqlalchemy.url in alembic.ini to point to your database.
+After each change in the models, you need to create a new migration script and apply it to the database:
 ```
 alembic upgrade head
 ```
@@ -91,13 +104,12 @@ leave-attendance-backend/
 │   │   ├── auth.py
 │   │   ├── leave.py
 │   │   └── attendance.py
-│   ├── services/                    # Business logic
-│   │   ├── auth.py
-│   │   ├── leave.py
-│   │   └── attendance.py
+│   ├── tests/                       # Unit tests
 │   ├── config.py                    # Configuration (DB, JWT, etc.)
-│   └── .env                         # Environment variables
+│   └── .env                         # Environment variables -> remember to add this in your local
 ├── alembic.ini                      # Alembic configuration
-├── migrations/                      # Database migrations
+├── migrations/                      # Database migrations -> after running alembic init migrations, it will create this folder
+│   ├── versions/                    # Migration scripts
+│   ├── env.py                       # Alembic environment file -> remember to modify database URL in this file
 └── requirements.txt                 # Project dependencies
 ```
