@@ -27,3 +27,8 @@ def login(login_data: user.UserLogin, db: Session = Depends(get_db)):
     token = create_access_token(data={"sub": str(user.id)})
     return {"token": token, "user": user}
 """
+
+@router.post("/logout")
+def logout():
+    # 若不處理 token 黑名單，前端清除 token 即完成
+    return {"message": "Logged out successfully"}
