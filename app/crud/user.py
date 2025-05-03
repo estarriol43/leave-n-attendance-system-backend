@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from .auth import verify_password
+from ..utils.auth import verify_password
+# from ..models.user import User
 
 fake_db_department = [
     {
