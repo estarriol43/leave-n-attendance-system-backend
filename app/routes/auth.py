@@ -1,32 +1,46 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..schemas.user import UserLogin, TokenResponse
+from ..schemas.user import UserLogin, Token
 from ..crud import user as user_crud
 from ..utils.auth import create_access_token
+from ..utils.dependencies import login_form_schema
 
 router = APIRouter(
-    prefix="/api/auth"
+    prefix="/api/auth",
     tags=["auth"]
 )
 
-
-@router.post("/login", response_model=TokenResponse)
-def login(login_data: UserLogin):
+@router.post("/login", response_model=Token)
+def login(login_data: login_form_schema):
     # temporary login funciton without db and token
-    user = user_crud.authenticate_user(login_data.email, login_data.password)
+    print("in login")
+    user = user_crud.authenticate_user(login_data.username, login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = "mytoken"
-    return {"token": token, "user": user}
+    # token = "mytoken"
+    token = create_access_token(data={"sub": str(1)})
+    return {"access_token": token, "token_type": "bearer"}
 
-"""
-@router.post("/login", response_model=TokenResponse)
-def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    user = user_crud.authenticate_user(db, login_data.email, login_data.password)
+"""    
+@router.post("/login", response_model=Token)
+def login(login_data: login_form_schema, db: Session = Depends(get_db)):
+    current_user = user_crud.authenticate_user(db, login_data.username, login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    user_id = current_user.id
+    department = user_crud.get_department(db, user_id)
+    user = {
+        "id": user_id,
+        "employee_id": current_user.employee_id,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "email": current_user.email,
+        "department":department,
+        "position": current_user.position,
+        "is_manager": current_user.is_manager        
+    }
     token = create_access_token(data={"sub": str(user.id)})
-    return {"token": token, "user": user}
+    return {"access_token": token, "token_type": "bearer"}
 """
 
 @router.post("/logout")
