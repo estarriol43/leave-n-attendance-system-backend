@@ -18,10 +18,8 @@ class User(Base):
 
     # relationships
     department = relationship('Department', back_populates='users')
-    # 1對多關聯：員工的下屬關聯
-    subordinates = relationship('Manager', back_populates='user')    
-    # 1對多關聯：員工的上司關聯
-    managers = relationship('Manager', back_populates='manager')
+    subordinate_relations = relationship('Manager', foreign_keys='Manager.user_id', back_populates='user')
+    manager_relations = relationship('Manager', foreign_keys='Manager.manager_id', back_populates='manager')
     # 1對多關聯：一個User可以有多個LeaveQuota
     leave_quotas = relationship('LeaveQuota', back_populates='user')
     # 1對多關聯：一個User可以有多個LeaveRequest

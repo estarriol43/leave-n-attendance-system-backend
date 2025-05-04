@@ -9,5 +9,5 @@ class Manager(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)  # 員工ID
     manager_id = Column(Integer, ForeignKey('users.id'), nullable=False)  # 上司ID
 
-    user = relationship('User', foreign_keys=[user_id], back_populates='subordinates')
-    manager = relationship('User', foreign_keys=[manager_id], back_populates='managers')
+    user = relationship('User', foreign_keys=[user_id], back_populates='subordinate_relations')
+    manager = relationship('User', foreign_keys=[manager_id], back_populates='manager_relations')
