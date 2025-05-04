@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from app.database import engine, Base
 from .routes import auth
+from .routes import user 
+
 
 
 app = FastAPI()
 
 app.include_router(auth.router)
+app.include_router(user.router)
 
 # Create database tables
 @app.on_event("startup")
