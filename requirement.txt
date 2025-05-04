@@ -7,3 +7,6 @@ pydantic
 python-dotenv
 graphviz
 sqlalchemy-schemadisplay
+python-jose[cryptography]
+passlib
+python-multipart
