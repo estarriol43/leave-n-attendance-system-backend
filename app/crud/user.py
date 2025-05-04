@@ -19,8 +19,8 @@ fake_db_user = [
         "email": "owen@ntu",
         "password": "mypass",
         "department": fake_db_department[0],
-        "position": "engineer",
-        "is_manager": False 
+        "position": "senior engineer",
+        "is_manager": True 
     },
     {
         "id": 2,
@@ -30,8 +30,8 @@ fake_db_user = [
         "email": "alice@ntu",
         "password": "mypass",
         "department": fake_db_department[0],
-        "position": "senior engineer",
-        "is_manager": True
+        "position": "engineer",
+        "is_manager": False
     },
 ]
 
@@ -85,24 +85,24 @@ def get_user_by_id(user_id: int):
 
 def get_team_members(manager_id: int):
    # temporary function without db
-    if(fake_db_user[1]['id'] != manager_id):
+    if(fake_db_user[0]['id'] != manager_id):
         return None
-    user = {
+    user = [{
         "department_id": 1,
-        "id": 1,
-        "employee_id": "Q1",
-        "first_name": "owen",
-        "last_name": "chen",
-        "email": "owen@ntu",
+        "id": 2,
+        "employee_id": "Q2",
+        "first_name": "alice",
+        "last_name": "wang",
+        "email": "alice@ntu",
         "password_hash": "mypass",
         "position": "engineer",
-        "manager_id": 2,
+        "manager_id": 1,
         "hire_date": "2025/05/03",
         "is_manager": True,
         "annual_leave_quota": 3,
         "sick_leave_quota": 3,
         "public_holiday_quota": 3
-    }
+    }]
     return user 
 
 """
