@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import settings
+from app.config import settings
 
 
 # Create the engine that will interact with the database
@@ -20,4 +20,5 @@ def get_db():
     try:
         yield db  # Yield the session to the route
     finally:
-        db.close()  # Ensure the session is closed after the request
+        db.close()  # Ensure the session is closed after the
+        request
