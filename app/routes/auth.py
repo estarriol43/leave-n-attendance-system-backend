@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from ..schemas.user import UserLogin, Token
 from ..crud import user as user_crud
@@ -11,18 +12,6 @@ router = APIRouter(
     tags=["auth"]
 )
 
-# @router.post("/login", response_model=Token)
-# def login(login_data: login_form_schema):
-#     # temporary login funciton without db and token
-#     print("in login")
-#     user = user_crud.authenticate_user(login_data.username, login_data.password)
-#     if not user:
-#         raise HTTPException(status_code=401, detail="Invalid credentials")
-#     # token = "mytoken"
-#     token = create_access_token(data={"sub": str(1)})
-#     return {"access_token": token, "token_type": "bearer"}
-
- 
 @router.post("/login", response_model=Token)
 def login(login_data: login_form_schema, db: Session = Depends(get_db)):
     current_user = user_crud.authenticate_user(db, login_data.username, login_data.password)
@@ -41,8 +30,20 @@ def login(login_data: login_form_schema, db: Session = Depends(get_db)):
         "is_manager": current_user.is_manager        
     }
     token = create_access_token(data={"sub": str(user['id'])})
-    return {"access_token": token, "token_type": "bearer"}
-
+    
+    cookie_response = JSONResponse(
+        content={"access_token": token, "token_type": "bearer"}
+    )
+    cookie_response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,              # use False only in dev (http)
+        samesite="Strict",        # or "Lax" if needed
+        max_age=3600,             # 1 hour
+        path="/"
+    )
+    return cookie_response
 
 @router.post("/logout")
 def logout():
