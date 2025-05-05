@@ -47,5 +47,15 @@ def login(login_data: login_form_schema, db: Session = Depends(get_db)):
 
 @router.post("/logout")
 def logout():
-    # 若不處理 token 黑名單，前端清除 token 即完成
-    return {"message": "Logged out successfully"}
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    
+    # Clear the HTTP-only cookie by setting it to expire immediately
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path="/"
+    )
+    
+    return response
