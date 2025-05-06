@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from ..schemas.user import UserLogin, Token
 from ..crud import user as user_crud
 from ..utils.auth import create_access_token
 from ..utils.dependencies import login_form_schema
+from ..database import get_db
 
 router = APIRouter(
     prefix="/api/auth",
@@ -11,21 +13,9 @@ router = APIRouter(
 )
 
 @router.post("/login", response_model=Token)
-def login(login_data: login_form_schema):
-    # temporary login funciton without db and token
-    print("in login")
-    user = user_crud.authenticate_user(login_data.username, login_data.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    # token = "mytoken"
-    token = create_access_token(data={"sub": str(1)})
-    return {"access_token": token, "token_type": "bearer"}
-
-"""    
-@router.post("/login", response_model=Token)
 def login(login_data: login_form_schema, db: Session = Depends(get_db)):
     current_user = user_crud.authenticate_user(db, login_data.username, login_data.password)
-    if not user:
+    if not current_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     user_id = current_user.id
     department = user_crud.get_department(db, user_id)
@@ -39,11 +29,33 @@ def login(login_data: login_form_schema, db: Session = Depends(get_db)):
         "position": current_user.position,
         "is_manager": current_user.is_manager        
     }
-    token = create_access_token(data={"sub": str(user.id)})
-    return {"access_token": token, "token_type": "bearer"}
-"""
+    token = create_access_token(data={"sub": str(user['id'])})
+    
+    cookie_response = JSONResponse(
+        content={"access_token": token, "token_type": "bearer"}
+    )
+    cookie_response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,              # use False only in dev (http)
+        samesite="Strict",        # or "Lax" if needed
+        max_age=3600,             # 1 hour
+        path="/"
+    )
+    return cookie_response
 
 @router.post("/logout")
 def logout():
-    # 若不處理 token 黑名單，前端清除 token 即完成
-    return {"message": "Logged out successfully"}
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    
+    # Clear the HTTP-only cookie by setting it to expire immediately
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path="/"
+    )
+    
+    return response

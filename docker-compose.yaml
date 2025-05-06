@@ -8,26 +8,29 @@ services:
     container_name: fastapi_app
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+psycopg2://test01:test01@35.201.178.208:5432/test01
-      - JWT_SECRET=your-secret-key
     depends_on:
       - db
     volumes:
       - .:/app
+    env_file:
+      - ./app/.env
 
   db:
-    image: postgres:13
+    image: postgres:14
     container_name: postgres_db
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: chloe
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: leave_attendance
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    # volumes:
+    #   - postgres_data:/var/lib/postgresql/data
 
 volumes:
   postgres_data:
+
+networks:
+  dev-network:
+    driver: bridge

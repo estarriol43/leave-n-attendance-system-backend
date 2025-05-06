@@ -20,4 +20,4 @@ def get_db():
     try:
         yield db  # Yield the session to the route
     finally:
-        db.close()  # Ensure the session is closed after the request
+        db.close()  # Ensure the session is closed after the
