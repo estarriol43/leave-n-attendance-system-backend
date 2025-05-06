@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:chloe@db:5432/leave_attendance
+      - DATABASE_URL=postgresql+psycopg2://test01:test01@35.201.178.208:5432/test01
       - JWT_SECRET=your-secret-key
     depends_on:
       - db
