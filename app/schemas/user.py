@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class UserLogin(BaseModel):
     email: str 
@@ -24,7 +24,7 @@ class UserLoginOut(BaseModel):
     is_manager: bool
 
 class UserOut(UserLoginOut):
-    manager: ManagerOut
+    manager: Optional[ManagerOut] = None
     hire_date: str
 
 

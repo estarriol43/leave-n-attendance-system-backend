@@ -4,6 +4,7 @@ from ..utils.auth import verify_password
 from typing import List
 from ..models.user import User
 from ..models.department import Department
+from ..models.manager import Manager
 
 
 fake_db_department = [
@@ -136,10 +137,19 @@ def get_team_members(db: Session, manager_id: int) -> List[User]:
 #         return result
 #     return None
 
+def get_manager_id(db: Session, user_id: int):
+    # get manager_id firstly:
+    stmt = select(Manager.manager_id).where(Manager.user_id == user_id)
+    result = db.execute(stmt).first()
+    if result:
+        return result.manager_id
+    return None
+
 def get_manager(db: Session, manager_id: int):
+    # then get manager name
     stmt = select(User.id, User.first_name, User.last_name).where(User.id == manager_id)
     return db.execute(stmt).first()
 
 def get_department(db: Session, department_id: int):
-    stmt = select(Department.id, Department.name)
+    stmt = select(Department.id, Department.name).where(Department.id == department_id)
     return db.execute(stmt).first()
