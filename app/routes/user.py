@@ -40,18 +40,8 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
 
 
 @router.get("/team", response_model=TeamListResponse)
-def get_my_team(current_user: dict = Depends(get_current_user)):
-    # temporary funciton without db
-    if not current_user["is_manager"]:
-        raise HTTPException(status_code=403, detail="Only managers can access this resource.")
-    members = user_crud.get_team_members(current_user["id"])
-    return {"team_members": members}
-    
-"""
-@router.get("/team", response_model=TeamListResponse)
 def get_my_team(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not current_user.is_manager:
         raise HTTPException(status_code=403, detail="Only managers can access this resource.")
     members = user_crud.get_team_members(db, current_user.id)
     return {"team_members": members}
-"""
