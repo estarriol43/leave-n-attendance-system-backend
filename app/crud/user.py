@@ -88,33 +88,22 @@ def authenticate_user(db: Session, email: str, password: str):
 #     }
 #     return user 
 
-# def get_team_members(manager_id: int):
-#    # temporary function without db
-#     if(fake_db_user[0]['id'] != manager_id):
-#         return None
-#     user = [{
-#         "department_id": 1,
-#         "id": 2,
-#         "employee_id": "Q2",
-#         "first_name": "alice",
-#         "last_name": "wang",
-#         "email": "alice@ntu",
-#         "password_hash": "mypass",
-#         "position": "engineer",
-#         "manager_id": 1,
-#         "hire_date": "2025/05/03",
-#         "is_manager": True,
-#         "annual_leave_quota": 3,
-#         "sick_leave_quota": 3,
-#         "public_holiday_quota": 3
-#     }]
-#     return user 
 
 def get_user_by_id(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
 def get_team_members(db: Session, manager_id: int) -> List[User]:
-    return db.query(User).filter(User.manager_id == manager_id).all()
+    # get all user_id of team members whose manager is current user
+    team_member_ids = db.scalars(
+        select(Manager.user_id).where(Manager.manager_id == manager_id)
+    ).all()
+
+    if not team_member_ids:
+        return []
+    
+    # get user profile based on team_member_ids list
+    return db.query(User).filter(User.id.in_(team_member_ids)).all()
+
 
 # def get_manager(manager_id: int):
 #     # temporary function without db
