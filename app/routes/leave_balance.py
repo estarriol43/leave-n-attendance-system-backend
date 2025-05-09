@@ -13,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("", response_model=LeaveBalanceResponse)
-def read_my_leave_balance(db: Session = Depends(get_db),current_user: User = Depends(get_current_user)):
+def read_my_leave_balance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_leave_balances(db, current_user.id)
 
 
