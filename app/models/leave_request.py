@@ -19,7 +19,7 @@ class LeaveRequest(Base):
     end_date = Column(Date, nullable=False)
     start_half_day = Column(Boolean, default=False)
     end_half_day = Column(Boolean, default=False)
-    days_count = Column(Integer)
+    days_count = Column(Integer) # 這裡可以是小數
     reason = Column(Text)
     status = Column(Enum(LeaveStatus), default=LeaveStatus.pending)
     proxy_user_id = Column(Integer, ForeignKey('users.id'))

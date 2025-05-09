@@ -11,6 +11,7 @@ from models.manager import Manager
 from werkzeug.security import generate_password_hash # hash後密碼字數會爆炸，先暫時不用
 import random
 from datetime import datetime, timedelta
+from sqlalchemy.exc import IntegrityError
 
 from database import SessionLocal
 
@@ -68,19 +69,35 @@ def generate_fake_leave_types(db: Session, num_leave_types: int = 5):
         db.add(leave_type)
     db.commit()
 
+
 def generate_fake_leave_quotas(db: Session, num_quotas: int = 30):
+    print("Clearing existing leave quotas...")
+    db.query(LeaveQuota).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+
     print("Generating fake leave quotas...")
     users = db.query(User).all()
     leave_types = db.query(LeaveType).all()
+    
     for _ in range(num_quotas):
+        user_id = fake.random_element(elements=users).id
+        leave_type_id = fake.random_element(elements=leave_types).id
+        year = 2025  # 假設所有假期類型的年度配額都為2025年
+
+        # 嘗試插入資料並捕獲唯一約束錯誤
         leave_quota = LeaveQuota(
-            user_id=fake.random_element(elements=users).id,
-            leave_type_id=fake.random_element(elements=leave_types).id,
-            year=fake.year(),
+            user_id=user_id,
+            leave_type_id=leave_type_id,
+            year=year,
             quota=fake.random_int(min=10, max=30),
         )
-        db.add(leave_quota)
-    db.commit()
+        try:
+            db.add(leave_quota)
+            db.commit()  # 提交新增操作
+        except IntegrityError:
+            db.rollback()
+            print(f"Skipping duplicate entry: user_id={user_id}, leave_type_id={leave_type_id}, year={year}")
+            continue  # 跳過重複的資料
 
 def generate_fake_leave_requests(db: Session, num_requests: int = 20):
     print("Generating fake leave requests...")
@@ -157,13 +174,13 @@ def init_db():
     """Initialize the database with fake data."""
     db = SessionLocal()
     try:
-        generate_fake_departments(db)
-        generate_fake_users(db)
-        generate_fake_leave_types(db)
+        # generate_fake_departments(db)
+        # generate_fake_users(db)
+        # generate_fake_leave_types(db)
         generate_fake_leave_quotas(db)
-        generate_fake_leave_requests(db)
-        generate_fake_notifications(db)
-        generate_fake_leave_request_attachments(db)
+        # generate_fake_leave_requests(db)
+        # generate_fake_notifications(db)
+        # generate_fake_leave_request_attachments(db)
         print("Fake data generation completed successfully.")
         
     except Exception as e:
