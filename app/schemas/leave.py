@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import date, datetime
 
@@ -39,3 +39,39 @@ class LeaveRequestDetail(BaseModel):
     created_at: datetime
     attachments: List[AttachmentBase] = []
 
+class LeaveRequestCreate(BaseModel):
+    leave_type_id: int
+    start_date: date
+    end_date: date
+    reason: str
+    proxy_user_id: int
+
+
+class LeaveTypeBasic(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProxyUserOut(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LeaveRequestOut(BaseModel):
+    id: int
+    request_id: str
+    leave_type: LeaveTypeBasic
+    start_date: date
+    end_date: date
+    days_count: float
+    reason: str
+    status: str
+    proxy_person: ProxyUserOut
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
