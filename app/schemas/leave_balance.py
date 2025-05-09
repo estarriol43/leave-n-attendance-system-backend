@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 from datetime import date
 
@@ -10,18 +10,14 @@ class LeaveRequestSummary(BaseModel):
     end_date: date
     days_count: float
     status: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LeaveTypeInfo(BaseModel):
     id: int
     name: str
     color_code: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LeaveBalanceItem(BaseModel):
@@ -30,11 +26,12 @@ class LeaveBalanceItem(BaseModel):
     used_days: float
     remaining_days: float
     leave_requests: List[LeaveRequestSummary]
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
 
 
 class LeaveBalanceResponse(BaseModel):
     year: int
     balances: List[LeaveBalanceItem]
+    model_config = ConfigDict(from_attributes=True)
+
