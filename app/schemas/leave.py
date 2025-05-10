@@ -37,7 +37,7 @@ class LeaveRequestDetail(BaseModel):
     approver: Optional[UserBase] = None
     approved_at: Optional[datetime] = None
     created_at: datetime
-    attachments: List[AttachmentBase] = []
+    # attachments: List[AttachmentBase] = []
 
 class LeaveRequestCreate(BaseModel):
     leave_type_id: int
@@ -112,3 +112,15 @@ class LeaveRequestTeamItem(LeaveRequestListItem):
 class LeaveRequestTeamListResponse(BaseModel):
     leave_requests: List[LeaveRequestTeamItem]
     pagination: PaginationMeta
+
+class ApproveLeaveRequest(BaseModel):
+    approver_id: int
+
+class LeaveRequestApprovalResponse(BaseModel):
+    id: int
+    request_id: str
+    status: str
+    approver: ProxyUserOut
+    approved_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
