@@ -6,43 +6,58 @@ from models.leave_request import LeaveRequest, LeaveStatus
 from models.leave_type import LeaveType
 from models.department import Department
 from models.notification import Notification
-from models.leave_request_attachment import LeaveRequestAttachment
+from models.leave_request_attachment import LeaveAttachment
+from models.audit_log import AuditLog
 from models.manager import Manager
-from werkzeug.security import generate_password_hash # hash後密碼字數會爆炸，先暫時不用
 import random
 from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
+from utils.auth import get_password_hash
+from typing import Dict
 
 from database import SessionLocal
 
 fake = Faker()
 
 def generate_fake_departments(db: Session, num_departments: int = 5):
+    print("Clearing existing departments...")
+    db.query(Department).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+
     print("Generating fake departments...")
     for _ in range(num_departments):
         department = Department(
-            name=fake.company(),
+            name=fake.company(),  # 生成公司名稱作為部門名稱
+            description=fake.text(max_nb_chars=200),  # 隨機生成一個描述
+            # created_at 和 updated_at 在資料庫層級會自動填充，因此不需要在這裡設置
         )
         db.add(department)
     db.commit()
 
 def generate_fake_users(db: Session, num_users: int = 20):
+    print("Clearing existing users...")
+    db.query(User).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+
     print("Generating fake users...")
     departments = db.query(Department).all()
     if not departments:
         raise ValueError("Departments must be generated before users.")
+    
     users = []  # 儲存所有生成的使用者
     for _ in range(num_users):
+        department = fake.random_element(elements=departments)  # 隨機選擇部門
+        password = get_password_hash('test')  # 隨機生成密碼
         user = User(
-            employee_id=f"EMP{fake.unique.random_number(digits=3)}",
+            employee_id=f"EMP{fake.unique.random_number(digits=5)}",  # 確保生成唯一的員工ID
             first_name=fake.first_name(),
             last_name=fake.last_name(),
             email=fake.email(),
-            department_id=fake.random_element(elements=departments).id,
+            department_id=department.id,  # 部門 ID
             position=fake.job(),
             hire_date=fake.date_this_decade(),
-            is_manager=fake.boolean(),
-            password_hash='test',
+            is_manager=fake.boolean(),  # 隨機決定是否為經理
+            password_hash=password,  # 密碼哈希
         )
         db.add(user)
         users.append(user)
@@ -51,11 +66,13 @@ def generate_fake_users(db: Session, num_users: int = 20):
 
     # 設置上司與下屬關係
     for user in users:
-        if user.is_manager:  # 隨機選擇下屬
+        if user.is_manager:  # 如果是經理，隨機選擇下屬
             subordinates = fake.random_elements(elements=users, length=fake.random_int(1, 5))
             for subordinate in subordinates:
-                manager_entry = Manager(user_id=subordinate.id, manager_id=user.id)
-                db.add(manager_entry)
+                # 確保經理的ID和下屬的ID不相同
+                if subordinate.id != user.id:
+                    manager_entry = Manager(user_id=subordinate.id, manager_id=user.id)
+                    db.add(manager_entry)
 
     db.commit()
 
@@ -63,8 +80,10 @@ def generate_fake_leave_types(db: Session, num_leave_types: int = 5):
     print("Generating fake leave types...")
     for _ in range(num_leave_types):
         leave_type = LeaveType(
-            name=fake.word(),
-            color_code=fake.color(),
+            name=fake.word(),  # 隨機生成名稱
+            description=fake.sentence() if fake.boolean() else None,  # 隨機生成描述，或設定為 None
+            requires_attachment=fake.boolean(),  # 隨機生成是否需要附件
+            color_code=fake.hex_color(),  # 使用 Hex 顏色碼來生成
         )
         db.add(leave_type)
     db.commit()
@@ -78,26 +97,35 @@ def generate_fake_leave_quotas(db: Session, num_quotas: int = 30):
     print("Generating fake leave quotas...")
     users = db.query(User).all()
     leave_types = db.query(LeaveType).all()
-    
+    existing_quotas = set()  # 用來追蹤已經存在的 (user_id, leave_type_id, year) 組合
+
+    leave_quotas_to_add = []  # 儲存所有將要插入的假資料
+
     for _ in range(num_quotas):
         user_id = fake.random_element(elements=users).id
         leave_type_id = fake.random_element(elements=leave_types).id
-        year = 2025  # 假設所有假期類型的年度配額都為2025年
+        year = random.randint(2020, 2025)  # 隨機選擇一個合理的年度
 
-        # 嘗試插入資料並捕獲唯一約束錯誤
+        # 確保不會插入重複的 user_id, leave_type_id, year 組合
+        if (user_id, leave_type_id, year) in existing_quotas:
+            continue  # 跳過重複的資料
+        existing_quotas.add((user_id, leave_type_id, year))
+
         leave_quota = LeaveQuota(
             user_id=user_id,
             leave_type_id=leave_type_id,
             year=year,
             quota=fake.random_int(min=10, max=30),
         )
-        try:
-            db.add(leave_quota)
-            db.commit()  # 提交新增操作
-        except IntegrityError:
-            db.rollback()
-            print(f"Skipping duplicate entry: user_id={user_id}, leave_type_id={leave_type_id}, year={year}")
-            continue  # 跳過重複的資料
+        leave_quotas_to_add.append(leave_quota)
+
+    # 一次性插入所有資料，提高性能
+    db.add_all(leave_quotas_to_add)
+    try:
+        db.commit()  # 提交新增操作
+    except IntegrityError as e:
+        db.rollback()
+        print(f"Error inserting leave quotas: {e}")
 
 def generate_fake_leave_requests(db: Session, num_requests: int = 20):
     print("Generating fake leave requests...")
@@ -108,84 +136,150 @@ def generate_fake_leave_requests(db: Session, num_requests: int = 20):
         raise ValueError("請先建立使用者與假期類型資料")
 
     for _ in range(num_requests):
-        status = random.choice(list(LeaveStatus))
+        # 隨機選擇狀態，可能是 Pending、Approved 或 Rejected
+        status = random.choice([LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.REJECTED])
+        
         user = fake.random_element(elements=users)
         leave_type = fake.random_element(elements=leave_types)
 
-        # start_date < end_date
+        # 確保 start_date < end_date
         start_date = fake.date_between(start_date='-30d', end_date='today')
         end_date = start_date + timedelta(days=random.randint(1, 5))
+
+        # 隨機選擇代理使用者 (proxy_user_id)，這裡假設選擇一個不同的員工作為代理
+        proxy_user = fake.random_element(elements=[u for u in users if u.id != user.id])
 
         leave_request = LeaveRequest(
             request_id=f"REQ{datetime.now().strftime('%Y%m%d')}{fake.unique.random_int(min=1000, max=9999)}",
             user_id=user.id,
             leave_type_id=leave_type.id,
+            proxy_user_id=proxy_user.id,  # 這裡使用隨機選擇的代理使用者 ID
             start_date=start_date,
             end_date=end_date,
             reason=fake.text(),
             status=status,
-            days_count=(end_date - start_date).days + 1,
-            approved_at=datetime.now() if status == LeaveStatus.approved else None,
-            rejection_reason=fake.sentence() if status == LeaveStatus.rejected else None,
+            days_count=(end_date - start_date).days,
+            # 根據 status 設置 approved_at 和 rejection_reason
+            approved_at=datetime.now() if status == LeaveStatus.APPROVED else None,
+            rejection_reason=fake.sentence() if status == LeaveStatus.REJECTED else None,
         )
+
         db.add(leave_request)
 
     db.commit()
 
 def generate_fake_notifications(db: Session, num_notifications: int = 20):
+    print("Clearing existing notifications...")
+    db.query(Notification).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+    
     print("Generating fake notifications...")
     users = db.query(User).all()
+    
+    if not users:
+        raise ValueError("Please generate users data first.")
+
     for _ in range(num_notifications):
+        # 隨機選擇一個用戶
+        user = fake.random_element(elements=users)
+
+        # 隨機生成相關欄位
+        related_to = fake.word() if fake.boolean() else None  # 有50%的機率讓 related_to 為 None
+        related_id = fake.random_int(min=1, max=1000)  # 隨機生成一個整數
+        is_read = fake.boolean()  # 隨機生成是否已讀的布林值
+
         notification = Notification(
-            user_id=fake.random_element(elements=users).id,
-            title=fake.sentence(),
-            message=fake.text(),
-            related_to=fake.word(),
-            related_id=fake.random_int(),
-            is_read=fake.boolean(),
+            user_id=user.id,
+            title=fake.sentence(),  # 隨機生成通知標題
+            message=fake.text(),  # 隨機生成通知內容
+            related_to=related_to,
+            related_id=related_id,
+            is_read=is_read,
         )
         db.add(notification)
+
     db.commit()
 
 def generate_fake_leave_request_attachments(db: Session, num_attachments: int = 20):
+    print("Clearing existing leave request attachments...")
+    db.query(LeaveAttachment).delete()  # 清空 leave_attachments 表格資料
+    db.commit()  # 提交刪除操作
+    
     print("Generating fake leave request attachments...")
-    leave_requests = db.query(LeaveRequest).all()
 
+    # 確保存在請假請求資料
+    leave_requests = db.query(LeaveRequest).all()
     if not leave_requests:
         raise ValueError("cannot generate attachments without leave requests")
 
     file_extensions = ['pdf', 'jpg', 'png', 'docx']
 
     for _ in range(num_attachments):
-        lr = fake.random_element(elements=leave_requests)
-        ext = fake.random_element(elements=file_extensions)
-        attachment = LeaveRequestAttachment(
-            leave_request_id=lr.id,
-            file_name=f"{fake.word()}.{ext}",
-            file_type=ext,
-            file_size=fake.random_int(min=100, max=2048),  # 單位：KB
+        lr = fake.random_element(elements=leave_requests)  # 隨機選擇一個請假請求
+        ext = fake.random_element(elements=file_extensions)  # 隨機選擇檔案擴展名
+
+        attachment = LeaveAttachment(
+            leave_request_id=lr.id,  # 使用隨機選擇的請假請求 ID
+            file_name=f"{fake.word()}.{ext}",  # 隨機生成檔案名稱與擴展名
+            file_type=ext,  # 檔案的 MIME 類型
+            file_size=random.randint(100, 2048),  # 隨機生成檔案大小，單位：KB
+            # uploaded_at 欄位會由資料庫自動處理，無需在這裡設定
         )
+
         db.add(attachment)
 
     db.commit()
 
+def generate_fake_audit_logs(db: Session, num_logs: int = 20):
+    print("Clearing existing audit logs...")
+    db.query(AuditLog).delete()  # 清空 audit_logs 表格資料
+    db.commit()  # 提交刪除操作
+
+    print("Generating fake audit logs...")
+    users = db.query(User).all()
+    
+    if not users:
+        raise ValueError("請先建立使用者資料")
+
+    for _ in range(num_logs):
+        user = fake.random_element(elements=users)
+        action = fake.random_element(elements=["create", "update", "delete"])
+        entity_type = fake.random_element(elements=["leave_request", "user", "department"])
+        entity_id = fake.random_int(min=1, max=1000)  # 隨機生成一個整數
+        details: Dict[str, str] = {
+            "field": fake.word(),
+            "old_value": fake.word(),
+            "new_value": fake.word()
+        }  # 隨機生成變更細節
+
+        audit_log = AuditLog(
+            user_id=user.id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            details=details,  # 記得 details 是 JSON 格式
+            ip_address=fake.ipv4(),  # 隨機生成 IP 地址
+        )
+        db.add(audit_log)
+
+    db.commit()
 
 def init_db():
     """Initialize the database with fake data."""
     db = SessionLocal()
     try:
-        # generate_fake_departments(db)
+        generate_fake_departments(db)
         # generate_fake_users(db)
         # generate_fake_leave_types(db)
-        generate_fake_leave_quotas(db)
+        # generate_fake_leave_quotas(db)
         # generate_fake_leave_requests(db)
         # generate_fake_notifications(db)
         # generate_fake_leave_request_attachments(db)
         print("Fake data generation completed successfully.")
         
-    except Exception as e:
-        print(f"Error generating fake data: {e}")
-        db.rollback()
+    # except Exception as e:
+    #     print(f"Error generating fake data: {e}")
+    #     db.rollback()
     finally:
         db.close()
 
