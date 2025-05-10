@@ -301,8 +301,8 @@ def list_team_leave_requests(
 @router.get("/pending", response_model=LeaveRequestTeamListResponse)
 def list_pending_leave_requests(
     user_id: Optional[int] = Query(None, description="target user_id"),
-    page: int = Query(1, ge = 1),
-    per_page: int = Query(10, ge=1, le=100),
+    page: Optional[int] = Query(1, ge = 1),
+    per_page: Optional[int] = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user:  User = Depends(get_current_user)    
 ): 
