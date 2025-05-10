@@ -21,6 +21,8 @@ def create_leave_request(db: Session, user_id: int, data: LeaveRequestCreate):
     # 計算請假天數（整天制）
     days_requested = (data.end_date - data.start_date).days + 1
     current_year = datetime.now().year
+    if days_requested <= 0:
+        raise ValueError("Invalid date: End_date should be after Start_day") 
 
     # get leave_type
     leave_type = db.query(LeaveType).filter(LeaveType.id == data.leave_type_id).first()
