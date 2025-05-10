@@ -6,7 +6,7 @@ import logging
 from ..crud import user as user_crud
 from ..crud import leave as leave_crud
 from ..schemas.user import UserOut, TeamListResponse
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse, LeaveRequestApprovalResponse, ApproveLeaveRequest
 from ..utils.dependencies import get_current_user
 from ..models.user import User
 from ..database import get_db
@@ -359,6 +359,41 @@ def get_leave_request_details(
     except Exception as e:
         logger.error(f"Unexpected error in leave request details: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
+
+@router.patch("/{leave_request_id}/approve", response_model=LeaveRequestApprovalResponse)
+def approve_leave_request(
+    leave_request_id: int,
+    payload: ApproveLeaveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Approve a leave request. Only managers can approve leave requests.
+    """
+    if not current_user.is_manager:
+        raise HTTPException(
+            status_code=403,
+            detail="Only managers can approve leave requests"
+        )
+    
+    try:
+        leave_request = leave_crud.approve_leave_request(
+            db=db,
+            leave_request_id=leave_request_id,
+            approver_id=payload.approver_id
+        )
+        
+        return {
+            "id": leave_request.id,
+            "request_id": leave_request.request_id,
+            "status": leave_request.status,
+            "approver": leave_request.approver,
+            "approved_at": leave_request.approved_at
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
 
 
