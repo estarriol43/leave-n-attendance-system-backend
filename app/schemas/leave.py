@@ -75,3 +75,32 @@ class LeaveRequestOut(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class LeaveRequestListItem(BaseModel):
+    id: int
+    request_id: str
+    leave_type: LeaveTypeBasic
+    start_date: date
+    end_date: date
+    days_count: float
+    reason: str
+    status: str
+    proxy_person: ProxyUserOut 
+    approver: Optional[ProxyUserOut] = None
+    approved_at: Optional[datetime] = None
+    created_at: datetime
+    rejection_reason: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginationMeta(BaseModel):
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+
+class LeaveRequestListResponse(BaseModel):
+    leave_requests: List[LeaveRequestListItem]
+    pagination: PaginationMeta
