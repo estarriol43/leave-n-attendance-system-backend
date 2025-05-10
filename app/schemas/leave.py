@@ -113,9 +113,6 @@ class LeaveRequestTeamListResponse(BaseModel):
     leave_requests: List[LeaveRequestTeamItem]
     pagination: PaginationMeta
 
-class ApproveLeaveRequest(BaseModel):
-    approver_id: int
-
 class LeaveRequestApprovalResponse(BaseModel):
     id: int
     request_id: str

@@ -8,7 +8,7 @@ from ..models.user import User
 from ..models.leave_type import LeaveType
 from ..models.leave_quota import LeaveQuota 
 from ..models.manager import Manager
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut, LeaveRequestTeamItem
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut, LeaveRequestTeamItem, LeaveRequestApprovalResponse
 from uuid import uuid4
 
 ALLOWED_STATUSES = {"pending", "approved", "rejected"}
@@ -226,7 +226,7 @@ def get_leave_request_by_id(db: Session, leave_request_id: int) -> LeaveRequestD
     
     return leave_request
 
-def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) -> LeaveRequestDetail:
+def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) -> LeaveRequestApprovalResponse:
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
@@ -235,13 +235,18 @@ def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) 
         raise ValueError("Can only approve pending leave requests")
     
     approver = db.query(User).filter(User.id == approver_id).first()
-    if not approver:
-        raise ValueError("Invalid approver ID")
-    
-    if not approver.is_manager:
+    if not approver or not approver.is_manager:
         raise PermissionError("Only managers can approve leave requests")
     
-    # Update the leave request
+    # Check if the approver is the manager of the request's user
+    is_manager = db.query(Manager).filter(
+        Manager.manager_id == approver_id,
+        Manager.user_id == leave_request.user_id
+    ).first()
+    
+    if not is_manager:
+        raise PermissionError("You are not authorized to approve this leave request")
+    
     leave_request.status = "approved"
     leave_request.approver_id = approver_id
     leave_request.approved_at = datetime.utcnow()
@@ -249,4 +254,10 @@ def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) 
     db.commit()
     db.refresh(leave_request)
     
-    return leave_request
+    return LeaveRequestApprovalResponse(
+        id=leave_request.id,
+        request_id=leave_request.request_id,
+        status=leave_request.status,
+        approver=ProxyUserOut.from_orm(approver),
+        approved_at=leave_request.approved_at
+    )
