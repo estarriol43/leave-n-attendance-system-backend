@@ -104,3 +104,11 @@ class PaginationMeta(BaseModel):
 class LeaveRequestListResponse(BaseModel):
     leave_requests: List[LeaveRequestListItem]
     pagination: PaginationMeta
+
+
+class LeaveRequestTeamItem(LeaveRequestListItem):
+    user: ProxyUserOut 
+
+class LeaveRequestTeamListResponse(BaseModel):
+    leave_requests: List[LeaveRequestTeamItem]
+    pagination: PaginationMeta

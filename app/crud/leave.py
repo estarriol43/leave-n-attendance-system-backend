@@ -7,8 +7,11 @@ from ..models.leave_request import LeaveRequest
 from ..models.user import User
 from ..models.leave_type import LeaveType
 from ..models.leave_quota import LeaveQuota 
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut
+from ..models.manager import Manager
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut, LeaveRequestTeamItem
 from uuid import uuid4
+
+ALLOWED_STATUSES = {"pending", "approved", "rejected"}
 
 def generate_request_id():
     id = str(uuid4().hex[:16].upper())
@@ -96,7 +99,6 @@ def get_leave_requests_for_user(
     page: int = 1,
     per_page: int = 10
 ):
-    ALLOWED_STATUSES = {"pending", "approved", "rejected"}
     if status and status not in ALLOWED_STATUSES:
         raise ValueError(f"Invalid status: '{status}'. Must be one of {ALLOWED_STATUSES}")
     
@@ -146,7 +148,74 @@ def get_leave_requests_for_user(
         "total_pages": (total + per_page - 1) // per_page
     }
 
+def get_team_leave_requests(
+    db: Session,
+    manager_id: int,
+    user_id: Optional[int] = None,
+    status: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    page: int = 1,
+    per_page: int = 10
+):
+    if status and status not in ALLOWED_STATUSES:
+        raise ValueError(f"Invalid status: '{status}'. Must be one of {ALLOWED_STATUSES}")
 
+    # get list of user_id for team member of that manaber
+    subquery = db.query(Manager.user_id).filter(Manager.manager_id == manager_id)
+    team_user_ids = [row[0] for row in subquery.all()]
+
+    if user_id and user_id not in team_user_ids:
+        # the target user_id is not the team member
+        raise PermissionError("You are not authorized to view this user's leave requests.")
+
+    target_ids = [user_id] if user_id else team_user_ids
+
+    query = db.query(LeaveRequest).options(
+        joinedload(LeaveRequest.user),
+        joinedload(LeaveRequest.leave_type),
+        joinedload(LeaveRequest.proxy_user),
+        joinedload(LeaveRequest.approver)
+    ).filter(LeaveRequest.user_id.in_(target_ids))
+
+    if status:
+        query = query.filter(LeaveRequest.status == status)
+    if start_date:
+        query = query.filter(LeaveRequest.start_date >= start_date)
+    if end_date:
+        query = query.filter(LeaveRequest.end_date <= end_date)
+
+    total = query.count()
+    results = query.order_by(LeaveRequest.start_date.desc()) \
+        .offset((page - 1) * per_page).limit(per_page).all()
+
+    items = []
+    for req in results:
+        items.append(LeaveRequestTeamItem(
+            id=req.id,
+            request_id= req.request_id,
+            leave_type=LeaveTypeBasic.from_orm(req.leave_type),
+            start_date=req.start_date,
+            end_date=req.end_date,
+            days_count=req.days_count,
+            reason=req.reason,
+            status=req.status,
+            rejection_reason=req.rejection_reason,
+            proxy_person=ProxyUserOut.from_orm(req.proxy_user),
+            approver=ProxyUserOut.from_orm(req.approver) if req.approver else None,
+            approved_at=req.approver,
+            created_at=req.created_at,
+            user= ProxyUserOut.from_orm(req.user)
+        ))
+
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page
+    }
 
 def get_leave_request_by_id(db: Session, leave_request_id: int) -> LeaveRequestDetail:
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
