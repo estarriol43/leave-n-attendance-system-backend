@@ -25,3 +25,15 @@ class PaginationMeta(BaseModel):
 class NotificationListResponse(BaseModel):
     notifications: List[NotificationBase]
     pagination: PaginationMeta
+
+
+class NotificationReadResponse(BaseModel):
+    id: int
+    is_read: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationReadAllResponse(BaseModel):
+    message: str
+    count: int

@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 from ..models.notification import Notification
-from ..schemas.notification import NotificationBase, PaginationMeta
+from ..schemas.notification import NotificationBase, PaginationMeta, NotificationReadResponse, NotificationReadAllResponse
+from fastapi import HTTPException
 
 
 def get_user_notifications(
@@ -53,3 +54,43 @@ def get_user_notifications(
             total_pages=total_pages
         )
     }
+
+
+def mark_notification_as_read(
+    db: Session,
+    notification_id: int,
+    user_id: int
+) -> NotificationReadResponse:
+    notification = db.query(Notification).filter(
+        Notification.id == notification_id,
+        Notification.user_id == user_id
+    ).first()
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    notification.is_read = True
+    db.commit()
+    db.refresh(notification)
+    
+    return NotificationReadResponse(
+        id=notification.id,
+        is_read=notification.is_read
+    )
+
+
+def mark_all_notifications_as_read(
+    db: Session,
+    user_id: int
+) -> NotificationReadAllResponse:
+    result = db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False
+    ).update({"is_read": True})
+    
+    db.commit()
+    
+    return NotificationReadAllResponse(
+        message="All notifications marked as read",
+        count=result
+    )
