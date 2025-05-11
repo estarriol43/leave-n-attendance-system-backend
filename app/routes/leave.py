@@ -82,11 +82,13 @@ def list_my_leave_requests(
         if start_date is not None:
             if not isinstance(start_date, date):
                 logger.warning(f"Invalid start_date format: {start_date}")
+            actual_start_date = start_date
         
         actual_end_date = None
         if end_date is not None:
             if not isinstance(end_date, date):
                 logger.warning(f"Invalid end_date format: {end_date}")
+            actual_end_date = end_date
         
         # 處理狀態參數
         actual_status = None
@@ -218,11 +220,15 @@ def list_team_leave_requests(
         if start_date is not None:
             if not isinstance(start_date, date):
                 logger.warning(f"Invalid start_date format: {start_date}")
+            else:
+                actual_start_date = start_date
         
         actual_end_date = None
         if end_date is not None:
             if not isinstance(end_date, date):
                 logger.warning(f"Invalid end_date format: {end_date}")
+            else:
+                actual_end_date = end_date
         
         # 處理狀態參數
         actual_status = None

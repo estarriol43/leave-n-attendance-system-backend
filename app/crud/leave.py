@@ -138,7 +138,7 @@ def get_leave_requests_for_user(
             rejection_reason=req.rejection_reason,
             proxy_person=ProxyUserOut.from_orm(req.proxy_user),
             approver=ProxyUserOut.from_orm(req.approver) if req.approver else None,
-            approved_at=req.approver,
+            approved_at=req.approved_at,
             created_at=req.created_at
         ))
 
@@ -205,7 +205,7 @@ def get_team_leave_requests(
             rejection_reason=req.rejection_reason,
             proxy_person=ProxyUserOut.from_orm(req.proxy_user),
             approver=ProxyUserOut.from_orm(req.approver) if req.approver else None,
-            approved_at=req.approver,
+            approved_at=req.approved_at,
             created_at=req.created_at,
             user= ProxyUserOut.from_orm(req.user)
         ))
