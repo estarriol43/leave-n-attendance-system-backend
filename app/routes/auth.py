@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from ..schemas.user import UserLogin, Token
@@ -6,19 +6,41 @@ from ..crud import user as user_crud
 from ..utils.auth import create_access_token
 from ..utils.dependencies import login_form_schema
 from ..database import get_db
+from pydantic import BaseModel
+import logging
+
+# 取得模組的日誌記錄器
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/auth",
     tags=["auth"]
 )
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 @router.post("/login", response_model=Token)
-def login(login_data: login_form_schema, db: Session = Depends(get_db)):
+async def login(
+    request: Request,
+    login_data: LoginRequest = Body(...),
+    db: Session = Depends(get_db)
+):
+    client_ip = request.client.host
+    logger.info(f"Login attempt from {client_ip} with username: {login_data.username}")
+    
     current_user = user_crud.authenticate_user(db, login_data.username, login_data.password)
     if not current_user:
+        logger.warning(f"Failed login attempt for {login_data.username} from {client_ip}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
     user_id = current_user.id
     department = user_crud.get_department(db, user_id)
+    
+    # 記錄用戶詳細信息，使用安全序列化
+    logger.debug(f"User details: ID: {user_id}, Email: {current_user.email}, Department: {object_to_dict(department)}")
+    
     user = {
         "id": user_id,
         "employee_id": current_user.employee_id,
@@ -29,7 +51,9 @@ def login(login_data: login_form_schema, db: Session = Depends(get_db)):
         "position": current_user.position,
         "is_manager": current_user.is_manager        
     }
+    
     token = create_access_token(data={"sub": str(user['id'])})
+    logger.debug(f"Generated token for user {user_id}: {token[:10]}...")
     
     cookie_response = JSONResponse(
         content={"access_token": token, "token_type": "bearer"}
@@ -38,24 +62,29 @@ def login(login_data: login_form_schema, db: Session = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,              # use False only in dev (http)
-        samesite="Strict",        # or "Lax" if needed
+        secure=False,              # Changed to False for development (http)
+        samesite="Lax",            # Changed to Lax for cross-domain requests in development
         max_age=3600,             # 1 hour
         path="/"
     )
+    logger.info(f"User {current_user.email} (ID: {user_id}) successfully logged in from {client_ip}")
     return cookie_response
 
 @router.post("/logout")
-def logout():
+def logout(request: Request):
+    client_ip = request.client.host
+    logger.info(f"Logout request from {client_ip}")
+    
     response = JSONResponse(content={"message": "Logged out successfully"})
     
     # Clear the HTTP-only cookie by setting it to expire immediately
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=True,
-        samesite="Strict",
+        secure=False,              # Changed to False for development
+        samesite="Lax",            # Changed to Lax for development
         path="/"
     )
     
+    logger.info(f"User logged out from {client_ip}")
     return response
