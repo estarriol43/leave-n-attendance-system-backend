@@ -3,12 +3,12 @@ from sqlalchemy import func
 from typing import Optional
 from fastapi import HTTPException
 from datetime import datetime, date
-from ..models.leave_request import LeaveRequest
+from ..models.leave_request import LeaveRequest, LeaveStatus
 from ..models.user import User
 from ..models.leave_type import LeaveType
 from ..models.leave_quota import LeaveQuota 
 from ..models.manager import Manager
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut, LeaveRequestTeamItem, LeaveRequestApprovalResponse
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestCreate, LeaveRequestOut, LeaveRequestListItem, LeaveTypeBasic, ProxyUserOut, LeaveRequestTeamItem, LeaveRequestApprovalResponse, LeaveRequestRejectionResponse
 from uuid import uuid4
 
 ALLOWED_STATUSES = {"pending", "approved", "rejected"}
@@ -231,7 +231,7 @@ def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) 
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     
-    if leave_request.status != "pending":
+    if leave_request.status != LeaveStatus.pending:
         raise ValueError("Can only approve pending leave requests")
     
     approver = db.query(User).filter(User.id == approver_id).first()
@@ -260,4 +260,42 @@ def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) 
         status=leave_request.status,
         approver=ProxyUserOut.from_orm(approver),
         approved_at=leave_request.approved_at
+    )
+
+def reject_leave_request(db: Session, leave_request_id: int, approver_id: int, rejection_reason: str) -> LeaveRequestRejectionResponse:
+    leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    if leave_request.status != LeaveStatus.pending:
+        raise ValueError("Can only reject pending leave requests")
+    
+    approver = db.query(User).filter(User.id == approver_id).first()
+    if not approver or not approver.is_manager:
+        raise PermissionError("Only managers can reject leave requests")
+    
+    # Check if the approver is the manager of the request's user
+    is_manager = db.query(Manager).filter(
+        Manager.manager_id == approver_id,
+        Manager.user_id == leave_request.user_id
+    ).first()
+    
+    if not is_manager:
+        raise PermissionError("You are not authorized to reject this leave request")
+    
+    leave_request.status = LeaveStatus.rejected
+    leave_request.approver_id = approver_id
+    leave_request.approved_at = datetime.utcnow()
+    leave_request.rejection_reason = rejection_reason
+    
+    db.commit()
+    db.refresh(leave_request)
+    
+    return LeaveRequestRejectionResponse(
+        id=leave_request.id,
+        request_id=leave_request.request_id,
+        status=leave_request.status,
+        approver=ProxyUserOut.from_orm(approver),
+        approved_at=leave_request.approved_at,
+        rejection_reason=leave_request.rejection_reason
     )

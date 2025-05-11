@@ -121,3 +121,16 @@ class LeaveRequestApprovalResponse(BaseModel):
     approved_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class LeaveRequestRejectionRequest(BaseModel):
+    rejection_reason: str
+
+class LeaveRequestRejectionResponse(BaseModel):
+    id: int
+    request_id: str
+    status: str
+    approver: ProxyUserOut
+    approved_at: datetime
+    rejection_reason: str
+
+    model_config = ConfigDict(from_attributes=True)

@@ -6,7 +6,7 @@ import logging
 from ..crud import user as user_crud
 from ..crud import leave as leave_crud
 from ..schemas.user import UserOut, TeamListResponse
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse, LeaveRequestApprovalResponse
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse, LeaveRequestApprovalResponse, LeaveRequestRejectionRequest, LeaveRequestRejectionResponse
 from ..utils.dependencies import get_current_user
 from ..models.user import User
 from ..database import get_db
@@ -375,6 +375,39 @@ def approve_leave_request(
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+
+@router.patch("/{leave_request_id}/reject", response_model=LeaveRequestRejectionResponse)
+def reject_leave_request(
+    leave_request_id: int,
+    rejection_data: LeaveRequestRejectionRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Reject a leave request. Only managers can reject leave requests for their team members.
+    """
+    client_ip = request.client.host
+    logger.info(f"Manager {current_user.email} (ID: {current_user.id}) attempting to reject leave request {leave_request_id} from {client_ip}")
+    
+    try:
+        result = leave_crud.reject_leave_request(
+            db, 
+            leave_request_id, 
+            current_user.id,
+            rejection_data.rejection_reason
+        )
+        logger.info(f"Successfully rejected leave request {leave_request_id} by manager {current_user.email}")
+        return result
+    except ValueError as e:
+        logger.error(f"ValueError in leave request rejection: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        logger.error(f"PermissionError in leave request rejection: {str(e)}")
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in leave request rejection: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 
 
