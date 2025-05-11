@@ -28,40 +28,46 @@ def get_my_profile(request: Request, current_user: User = Depends(get_current_us
     manager_id = user_crud.get_manager_id(db, user_id)
     logger.debug(f"Manager ID for user {user_id}: {manager_id}")
     
-    if manager_id is None:
-        manager = None
-    else:
+    # 處理 manager
+    manager_dict = None
+    if manager_id is not None:
         manager = user_crud.get_manager(db, manager_id)
-        # 安全地記錄管理者信息
         if manager:
-            manager_info = {
+            manager_dict = {
                 "id": manager.id,
-                "name": f"{manager.first_name} {manager.last_name}",
+                "first_name": manager.first_name,
+                "last_name": manager.last_name
             }
-            # 使用內建函數序列化
-            logger.debug(f"Manager info: {safe_json(manager_info)}")
+            logger.debug(f"Manager info: {manager_dict}")
 
-    department = user_crud.get_department(db, department_id)
-    logger.debug(f"Department for user {user_id}: {department}")
+    # 處理 department
+    department_dict = None
+    if department_id is not None:
+        department = user_crud.get_department(db, department_id)
+        if department:
+            department_dict = {
+                "id": department.id,
+                "name": department.name
+            }
+    logger.debug(f"Department for user {user_id}: {department_dict}")
     
+    # 構建結果
     result = {
         "id": user_id,
         "employee_id": current_user.employee_id,
         "first_name": current_user.first_name,
         "last_name": current_user.last_name,
         "email": current_user.email,
-        "department": department,
+        "department": department_dict,
         "position": current_user.position,
-        "manager": manager,
+        "manager": manager_dict,
         "hire_date": str(current_user.hire_date),
         "is_manager": current_user.is_manager
     }
     
-    # 使用安全的 JSON 序列化
-    filtered_result = {k: v for k, v in result.items() if k not in ['manager']}
-    logger.debug(f"User profile data prepared: {object_to_dict(filtered_result)}")
+    logger.debug(f"User profile data prepared")
     logger.info(f"Successfully returned profile for user {current_user.email} (ID: {user_id})")
-    return result 
+    return result
 
 
 @router.get("/team", response_model=TeamListResponse)
