@@ -11,6 +11,7 @@ from .routes import auth
 from .routes import user 
 from .routes import leave_balance
 from .routes import leave
+from .routes import calendar
 
 
 # 配置更好的日誌記錄系統
@@ -109,6 +110,7 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(leave.router)
 app.include_router(leave_balance.router)
+app.include_router(calendar.router)
 
 
 # Create database tables
