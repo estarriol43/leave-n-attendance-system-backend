@@ -35,9 +35,9 @@ def generate_fake_departments(db: Session, num_departments: int = 5):
     db.commit()
 
 def generate_fake_users(db: Session, num_users: int = 20):
-    print("Clearing existing users...")
-    db.query(User).delete()  # 清空 leave_quota 表格資料
-    db.commit()  # 提交刪除操作
+    # print("Clearing existing users...")
+    # db.query(User).delete()  # 清空 leave_quota 表格資料
+    # db.commit()  # 提交刪除操作
 
     print("Generating fake users...")
     departments = db.query(Department).all()
@@ -90,9 +90,9 @@ def generate_fake_leave_types(db: Session, num_leave_types: int = 5):
 
 
 def generate_fake_leave_quotas(db: Session, num_quotas: int = 30):
-    print("Clearing existing leave quotas...")
-    db.query(LeaveQuota).delete()  # 清空 leave_quota 表格資料
-    db.commit()  # 提交刪除操作
+    # print("Clearing existing leave quotas...")
+    # db.query(LeaveQuota).delete()  # 清空 leave_quota 表格資料
+    # db.commit()  # 提交刪除操作
 
     print("Generating fake leave quotas...")
     users = db.query(User).all()
@@ -104,7 +104,7 @@ def generate_fake_leave_quotas(db: Session, num_quotas: int = 30):
     for _ in range(num_quotas):
         user_id = fake.random_element(elements=users).id
         leave_type_id = fake.random_element(elements=leave_types).id
-        year = random.randint(2020, 2025)  # 隨機選擇一個合理的年度
+        year = 2025  # 隨機選擇一個合理的年度
 
         # 確保不會插入重複的 user_id, leave_type_id, year 組合
         if (user_id, leave_type_id, year) in existing_quotas:
@@ -128,6 +128,10 @@ def generate_fake_leave_quotas(db: Session, num_quotas: int = 30):
         print(f"Error inserting leave quotas: {e}")
 
 def generate_fake_leave_requests(db: Session, num_requests: int = 20):
+    print("Clearing existing leave requests...")
+    db.query(LeaveRequest).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+    
     print("Generating fake leave requests...")
     users = db.query(User).all()
     leave_types = db.query(LeaveType).all()
@@ -137,8 +141,8 @@ def generate_fake_leave_requests(db: Session, num_requests: int = 20):
 
     for _ in range(num_requests):
         # 隨機選擇狀態，可能是 Pending、Approved 或 Rejected
-        status = random.choice([LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.REJECTED])
-        
+        status = random.choice(['Pending', 'Approved', 'Rejected'])
+        print(f"Generating leave request with status: {status}, type: {type(status)}")
         user = fake.random_element(elements=users)
         leave_type = fake.random_element(elements=leave_types)
 
@@ -160,8 +164,8 @@ def generate_fake_leave_requests(db: Session, num_requests: int = 20):
             status=status,
             days_count=(end_date - start_date).days,
             # 根據 status 設置 approved_at 和 rejection_reason
-            approved_at=datetime.now() if status == LeaveStatus.APPROVED else None,
-            rejection_reason=fake.sentence() if status == LeaveStatus.REJECTED else None,
+            approved_at=datetime.now() if status == "Approved" else None,
+            rejection_reason=fake.sentence() if status == "Rejected" else None,
         )
 
         db.add(leave_request)
@@ -184,7 +188,7 @@ def generate_fake_notifications(db: Session, num_notifications: int = 20):
         user = fake.random_element(elements=users)
 
         # 隨機生成相關欄位
-        related_to = fake.word() if fake.boolean() else None  # 有50%的機率讓 related_to 為 None
+        related_to = fake.word()  # 有50%的機率讓 related_to 為 None
         related_id = fake.random_int(min=1, max=1000)  # 隨機生成一個整數
         is_read = fake.boolean()  # 隨機生成是否已讀的布林值
 
@@ -221,6 +225,7 @@ def generate_fake_leave_request_attachments(db: Session, num_attachments: int = 
         attachment = LeaveAttachment(
             leave_request_id=lr.id,  # 使用隨機選擇的請假請求 ID
             file_name=f"{fake.word()}.{ext}",  # 隨機生成檔案名稱與擴展名
+            file_path=f"/fake/path/to/{fake.word()}.{ext}",  # 隨機生成檔案路徑
             file_type=ext,  # 檔案的 MIME 類型
             file_size=random.randint(100, 2048),  # 隨機生成檔案大小，單位：KB
             # uploaded_at 欄位會由資料庫自動處理，無需在這裡設定
@@ -268,13 +273,14 @@ def init_db():
     """Initialize the database with fake data."""
     db = SessionLocal()
     try:
-        generate_fake_departments(db)
+        # generate_fake_departments(db)
         # generate_fake_users(db)
         # generate_fake_leave_types(db)
-        # generate_fake_leave_quotas(db)
+        generate_fake_leave_quotas(db)
         # generate_fake_leave_requests(db)
         # generate_fake_notifications(db)
-        # generate_fake_leave_request_attachments(db)
+        generate_fake_leave_request_attachments(db)
+        # generate_fake_audit_logs(db)
         print("Fake data generation completed successfully.")
         
     # except Exception as e:

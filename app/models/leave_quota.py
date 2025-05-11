@@ -2,6 +2,8 @@ from sqlalchemy import Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
+
+
 class LeaveQuota(Base):
     __tablename__ = 'leave_quotas'
     __table_args__ = (
@@ -14,6 +16,5 @@ class LeaveQuota(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     quota: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # 確保回溯的關聯定義正確
     user: Mapped["User"] = relationship("User", back_populates="leave_quotas")
-    leave_type: Mapped["LeaveType"] = relationship("LeaveType", back_populates="leave_quotas")
+    leave_type: Mapped["LeaveType"] = relationship("LeaveType", back_populates="leave_quotas")  # 確保與 LeaveType 的 back_populates 一致
