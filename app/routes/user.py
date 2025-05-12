@@ -71,9 +71,35 @@ def get_my_profile(request: Request, current_user: User = Depends(get_current_us
 
 
 @router.get("/team", response_model=TeamListResponse)
-def get_my_team(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_teammate(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get teammate of the user
+    """
     client_ip = request.client.host
     logger.info(f"User {current_user.email} (ID: {current_user.id}) requesting team list from {client_ip}")
+    
+    manager_id = user_crud.get_manager_id(db, current_user.id)
+    
+    members = user_crud.get_team_members(db, manager_id)
+    
+    # 記錄團隊成員信息，但避免記錄敏感信息
+    member_count = len(members) if members else 0
+    logger.debug(f"Found {member_count} team members for manager {current_user.id}")
+    if members:
+        member_ids = [str(m.id) for m in members]
+        logger.debug(f"Team member IDs: {', '.join(member_ids)}")
+    
+    logger.info(f"Successfully returned team list with {member_count} members for manager {current_user.email}")
+    return {"team_members": members}
+
+
+@router.get("/subordinates", response_model=TeamListResponse)
+def get_subordinates(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get subordinates of the manager
+    """
+    client_ip = request.client.host
+    logger.info(f"User {current_user.email} (ID: {current_user.id}) requesting list of subordinates from {client_ip}")
     
     if not current_user.is_manager:
         logger.warning(f"Non-manager user {current_user.email} (ID: {current_user.id}) attempted to access team list")
