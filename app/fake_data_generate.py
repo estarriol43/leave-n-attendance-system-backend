@@ -164,6 +164,7 @@ def generate_fake_leave_requests(db: Session, num_requests: int = 20):
             status=status,
             days_count=(end_date - start_date).days,
             # 根據 status 設置 approved_at 和 rejection_reason
+            approver_id=fake.random_element(elements=users).id if status == "Approved" else None,
             approved_at=datetime.now() if status == "Approved" else None,
             rejection_reason=fake.sentence() if status == "Rejected" else None,
         )
