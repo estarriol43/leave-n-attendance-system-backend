@@ -6,7 +6,7 @@ import logging
 from ..crud import user as user_crud
 from ..crud import leave as leave_crud
 from ..schemas.user import UserOut, TeamListResponse
-from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse
+from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse, LeaveRequestApprovalResponse, LeaveRequestRejectionRequest, LeaveRequestRejectionResponse
 from ..utils.dependencies import get_current_user
 from ..models.user import User
 from ..database import get_db
@@ -82,11 +82,13 @@ def list_my_leave_requests(
         if start_date is not None:
             if not isinstance(start_date, date):
                 logger.warning(f"Invalid start_date format: {start_date}")
+            actual_start_date = start_date
         
         actual_end_date = None
         if end_date is not None:
             if not isinstance(end_date, date):
                 logger.warning(f"Invalid end_date format: {end_date}")
+            actual_end_date = end_date
         
         # 處理狀態參數
         actual_status = None
@@ -218,11 +220,15 @@ def list_team_leave_requests(
         if start_date is not None:
             if not isinstance(start_date, date):
                 logger.warning(f"Invalid start_date format: {start_date}")
+            else:
+                actual_start_date = start_date
         
         actual_end_date = None
         if end_date is not None:
             if not isinstance(end_date, date):
                 logger.warning(f"Invalid end_date format: {end_date}")
+            else:
+                actual_end_date = end_date
         
         # 處理狀態參數
         actual_status = None
@@ -358,6 +364,55 @@ def get_leave_request_details(
         raise e
     except Exception as e:
         logger.error(f"Unexpected error in leave request details: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
+
+@router.patch("/{leave_request_id}/approve", response_model=LeaveRequestApprovalResponse)
+def approve_leave_request(
+    leave_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Approve a leave request. Only managers can approve leave requests for their team members.
+    """
+    try:
+        return leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+@router.patch("/{leave_request_id}/reject", response_model=LeaveRequestRejectionResponse)
+def reject_leave_request(
+    leave_request_id: int,
+    rejection_data: LeaveRequestRejectionRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Reject a leave request. Only managers can reject leave requests for their team members.
+    """
+    client_ip = request.client.host
+    logger.info(f"Manager {current_user.email} (ID: {current_user.id}) attempting to reject leave request {leave_request_id} from {client_ip}")
+    
+    try:
+        result = leave_crud.reject_leave_request(
+            db, 
+            leave_request_id, 
+            current_user.id,
+            rejection_data.rejection_reason
+        )
+        logger.info(f"Successfully rejected leave request {leave_request_id} by manager {current_user.email}")
+        return result
+    except ValueError as e:
+        logger.error(f"ValueError in leave request rejection: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        logger.error(f"PermissionError in leave request rejection: {str(e)}")
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in leave request rejection: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 
