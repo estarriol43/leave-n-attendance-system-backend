@@ -44,7 +44,6 @@ def generate_fake_users(db: Session, num_users: int = 20):
     if not departments:
         raise ValueError("Departments must be generated before users.")
     
-    users = []  # 儲存所有生成的使用者
     for _ in range(num_users):
         department = fake.random_element(elements=departments)  # 隨機選擇部門
         password = get_password_hash('test')  # 隨機生成密碼
@@ -60,21 +59,44 @@ def generate_fake_users(db: Session, num_users: int = 20):
             password_hash=password,  # 密碼哈希
         )
         db.add(user)
-        users.append(user)
     
     db.commit()
 
-    # 設置上司與下屬關係
-    for user in users:
-        if user.is_manager:  # 如果是經理，隨機選擇下屬
-            subordinates = fake.random_elements(elements=users, length=fake.random_int(1, 5))
-            for subordinate in subordinates:
-                # 確保經理的ID和下屬的ID不相同
-                if subordinate.id != user.id:
-                    manager_entry = Manager(user_id=subordinate.id, manager_id=user.id)
-                    db.add(manager_entry)
+def reset_manager_relations(db: Session):
+    print("Clearing existing manager relations...")
+    db.query(Manager).delete()  # 清空 leave_quota 表格資料
+    db.commit()  # 提交刪除操作
+
+    print("Generating fake manager relations...")
+    users = db.query(User).all()
+    managers = [user for user in users if user.is_manager]  # 過濾出經理的使用者
+    available_subordinates = [user for user in users if not user.is_manager]  # 過濾出非經理的使用者
+    if not available_subordinates:
+        raise ValueError("No available users to assign as subordinates.")
+    if not managers:
+        raise ValueError("No managers available to assign subordinates.")
+    print(f"Managers: {[m.id for m in managers]}")
+    for manager in managers:
+        print("available_subordinates", [u.id for u in available_subordinates])
+        if len(available_subordinates) == 0:
+            print("No available subordinates left to assign.")
+            break
+
+        if len(available_subordinates) > 5:
+            subordinate_num = fake.random_int(1, 5)
+        else:
+            subordinate_num = fake.random_int(1, len(available_subordinates))
+        
+        subordinates = fake.random_elements(elements=available_subordinates, length=subordinate_num, unique=True)
+        for subordinate in subordinates:
+            manager_entry = Manager(user_id=subordinate.id, manager_id=manager.id)
+            db.add(manager_entry)
+            print(f"Removed {subordinate.id} from available subordinates")
+            available_subordinates.remove(subordinate)  # 從可用的下屬中移除已經分配的下屬
 
     db.commit()
+
+
 
 def generate_fake_leave_types(db: Session, num_leave_types: int = 5):
     print("Generating fake leave types...")
@@ -276,11 +298,12 @@ def init_db():
     try:
         # generate_fake_departments(db)
         # generate_fake_users(db)
+        reset_manager_relations(db)
         # generate_fake_leave_types(db)
-        generate_fake_leave_quotas(db)
+        # generate_fake_leave_quotas(db)
         # generate_fake_leave_requests(db)
         # generate_fake_notifications(db)
-        generate_fake_leave_request_attachments(db)
+        # generate_fake_leave_request_attachments(db)
         # generate_fake_audit_logs(db)
         print("Fake data generation completed successfully.")
         
