@@ -428,8 +428,16 @@ def reject_leave_request(
             current_user.id,
             rejection_data.rejection_reason
         )
-        # TODO: push a notification to current user
         logger.info(f"Successfully rejected leave request {leave_request_id} by manager {current_user.email}")
+
+        # push a notification to the user of leave request
+        applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "Your leave request has been rejected."
+        message = "Oops! Your leave request (id: " + str(leave_request_id) + ") has been rejected." 
+        leave_request_id = leave_request_id 
+        notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+
         return result
     except ValueError as e:
         logger.error(f"ValueError in leave request rejection: {str(e)}")
