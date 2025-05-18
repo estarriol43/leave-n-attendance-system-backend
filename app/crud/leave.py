@@ -98,6 +98,7 @@ def get_leave_requests_for_user(
     status: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    leave_type_id: Optional[int] = None,
     page: int = 1,
     per_page: int = 10
 ):
@@ -118,6 +119,9 @@ def get_leave_requests_for_user(
 
     if end_date:
         query = query.filter(LeaveRequest.end_date <= end_date)
+        
+    if leave_type_id:
+        query = query.filter(LeaveRequest.leave_type_id == leave_type_id)
 
     total = query.count()
     results = query.order_by(LeaveRequest.start_date.desc()) \
@@ -157,6 +161,7 @@ def get_team_leave_requests(
     status: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    leave_type_id: Optional[int] = None,
     page: int = 1,
     per_page: int = 10
 ):
@@ -186,6 +191,8 @@ def get_team_leave_requests(
         query = query.filter(LeaveRequest.start_date >= start_date)
     if end_date:
         query = query.filter(LeaveRequest.end_date <= end_date)
+    if leave_type_id:
+        query = query.filter(LeaveRequest.leave_type_id == leave_type_id)
 
     total = query.count()
     results = query.order_by(LeaveRequest.start_date.desc()) \
