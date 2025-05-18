@@ -390,6 +390,7 @@ def approve_leave_request(
     """
     Approve a leave request. Only managers can approve leave requests for their team members.
     """
+    
     try:
         result = leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
 
