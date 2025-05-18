@@ -291,7 +291,7 @@ def reject_leave_request(db: Session, leave_request_id: int, approver_id: int, r
     if not is_manager:
         raise PermissionError("You are not authorized to reject this leave request")
     
-    leave_request.status = "reject"
+    leave_request.status = "rejected"
     leave_request.approver_id = approver_id
     leave_request.approved_at = datetime.utcnow()
     leave_request.rejection_reason = rejection_reason
