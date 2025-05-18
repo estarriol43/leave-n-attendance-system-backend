@@ -5,6 +5,7 @@ from datetime import date
 import logging
 from ..crud import user as user_crud
 from ..crud import leave as leave_crud
+from ..crud import notification as notification_crud
 from ..schemas.user import UserOut, TeamListResponse
 from ..schemas.leave import LeaveRequestDetail, LeaveRequestOut, LeaveRequestCreate, LeaveRequestListResponse, LeaveRequestTeamListResponse, LeaveRequestApprovalResponse, LeaveRequestRejectionRequest, LeaveRequestRejectionResponse
 from ..utils.dependencies import get_current_user
@@ -29,9 +30,23 @@ def request_leave(
     Create a new leave request for current user
     """
     try: 
-        return leave_crud.create_leave_request(db, current_user.id, payload)
+        result = leave_crud.create_leave_request(db, current_user.id, payload)
+        # get manager id
+        manager_id = user_crud.get_manager_id(db, current_user.id)
+        if manager_id != None:
+            # then push a notification to his manager
+            title = "New leave request requires your review"
+            message =  str(current_user.first_name) + " " + str(current_user.last_name) + "'s leave request requires your approval."
+            leave_request_id = result.id
+            notification_crud.create_notifications(db, manager_id, title, message, leave_request_id)
+            logger.info(f"Successfully send notification to manager whose use_id is: {manager_id}")
+        else:
+            logger.warning(f"Cannot find the manager of current user whose user_id: {current_user.id}")
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get("", response_model=LeaveRequestListResponse)
 def list_my_leave_requests(
@@ -376,7 +391,17 @@ def approve_leave_request(
     Approve a leave request. Only managers can approve leave requests for their team members.
     """
     try:
-        return leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
+        result = leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
+
+        # push a notification to the user of leave request
+        applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "Your leave request has been approved!"
+        message = "Congratulations! Your leave request (id: " + str(leave_request_id) + ") has been approved!" 
+        leave_request_id = leave_request_id 
+        notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
@@ -404,6 +429,15 @@ def reject_leave_request(
             rejection_data.rejection_reason
         )
         logger.info(f"Successfully rejected leave request {leave_request_id} by manager {current_user.email}")
+
+        # push a notification to the user of leave request
+        applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "Your leave request has been rejected."
+        message = "Oops! Your leave request (id: " + str(leave_request_id) + ") has been rejected." 
+        leave_request_id = leave_request_id 
+        notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+
         return result
     except ValueError as e:
         logger.error(f"ValueError in leave request rejection: {str(e)}")

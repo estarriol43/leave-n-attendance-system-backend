@@ -226,12 +226,20 @@ def get_leave_request_by_id(db: Session, leave_request_id: int) -> LeaveRequestD
     
     return leave_request
 
+def get_user_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
+    leave_request = db.query(LeaveRequest.user_id).filter(LeaveRequest.id == leave_request_id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
 def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) -> LeaveRequestApprovalResponse:
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     
-    if leave_request.status != LeaveStatus.pending:
+
+    if leave_request.status != "pending":
         raise ValueError("Can only approve pending leave requests")
     
     approver = db.query(User).filter(User.id == approver_id).first()
@@ -267,7 +275,7 @@ def reject_leave_request(db: Session, leave_request_id: int, approver_id: int, r
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     
-    if leave_request.status != LeaveStatus.pending:
+    if leave_request.status != "pending":
         raise ValueError("Can only reject pending leave requests")
     
     approver = db.query(User).filter(User.id == approver_id).first()
@@ -283,7 +291,7 @@ def reject_leave_request(db: Session, leave_request_id: int, approver_id: int, r
     if not is_manager:
         raise PermissionError("You are not authorized to reject this leave request")
     
-    leave_request.status = LeaveStatus.rejected
+    leave_request.status = "rejected"
     leave_request.approver_id = approver_id
     leave_request.approved_at = datetime.utcnow()
     leave_request.rejection_reason = rejection_reason
