@@ -391,8 +391,17 @@ def approve_leave_request(
     Approve a leave request. Only managers can approve leave requests for their team members.
     """
     try:
-        return leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
-        # TODO: push a notification to current user
+        result = leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
+
+        # push a notification to the user of leave request
+        applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "Your leave request has been approved!"
+        message = "Congratulations! Your leave request (id: " + str(leave_request_id) + ") has been approved!" 
+        leave_request_id = leave_request_id 
+        notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except PermissionError as e:
