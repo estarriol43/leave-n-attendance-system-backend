@@ -114,6 +114,10 @@ leave-attendance-backend/
 └── requirements.txt                 # Project dependencies
 ```
 
+## How to run the unit test:
+```
+	export $(cat app/.env | grep -v ^# | xargs) && pytest --cov=app --cov-report=term-missing
+```
 ## TODO
 
 - 下載 postgresql: https://www.postgresql.org/download/
