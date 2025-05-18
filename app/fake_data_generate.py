@@ -197,26 +197,27 @@ def generate_fake_leave_requests(db: Session, num_requests: int = 20):
 
 def generate_fake_notifications(db: Session, num_notifications: int = 20):
     print("Clearing existing notifications...")
-    db.query(Notification).delete()  # 清空 leave_quota 表格資料
+    db.query(Notification).delete()  # 清空表格資料
     db.commit()  # 提交刪除操作
     
     print("Generating fake notifications...")
-    users = db.query(User).all()
+    leave_requests = db.query(LeaveRequest).all()
     
-    if not users:
+    if not leave_requests:
         raise ValueError("Please generate users data first.")
 
     for _ in range(num_notifications):
-        # 隨機選擇一個用戶
-        user = fake.random_element(elements=users)
+        # 隨機選擇一個請假請求
+        leave_request = fake.random_element(elements=leave_requests, unique=True)
+        user = leave_request.user_id
+        related_id = leave_request.id
 
         # 隨機生成相關欄位
         related_to = fake.word()  # 有50%的機率讓 related_to 為 None
-        related_id = fake.random_int(min=1, max=1000)  # 隨機生成一個整數
         is_read = fake.boolean()  # 隨機生成是否已讀的布林值
 
         notification = Notification(
-            user_id=user.id,
+            user_id=user,
             title=fake.sentence(),  # 隨機生成通知標題
             message=fake.text(),  # 隨機生成通知內容
             related_to=related_to,
