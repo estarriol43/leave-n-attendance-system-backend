@@ -34,3 +34,22 @@ def test_create_leave_request():
     assert data["status"] == "pending"
     assert data["days_count"] == 3
     assert "proxy_person" in data
+
+def test_list_my_leave_requests():
+    # login as subordinate (user id: 17)
+    cookie = login_as("carolyn50@example.com", "test")
+    # test with all query parameter
+    response = client.get("/api/leave-requests?status=pending&start_date=2024-12-01&end_date=2024-12-10&page=1&per_page=10", cookies=cookie)
+    assert response.status_code == 200
+    data = response.json()
+    assert "leave_requests" in data
+    assert isinstance(data["leave_requests"], list)
+    assert "pagination" in data
+
+    # test with all query parameter
+    response = client.get("/api/leave-requests", cookies=cookie)
+    assert response.status_code == 200
+    data = response.json()
+    assert "leave_requests" in data
+    assert isinstance(data["leave_requests"], list)
+    assert "pagination" in data
