@@ -126,3 +126,28 @@ def test_get_subordinates():
     cookie = login_as("carolyn50@example.com", "test")
     response = client.get("/api/users/subordinates", cookies=cookie)
     assert response.status_code == 403 
+
+def test_get_user_by_id():
+    # login as manager (user id: 19)
+    cookie = login_as("jessicavalentine@example.org", "test")
+    response = client.get("/api/users/17", cookies=cookie)
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": 17,
+        "employee_id": "EMP148",
+        "first_name": "Evelyn",
+        "last_name": "Ware",
+        "email": "carolyn50@example.com",
+        "department": {
+            "id": 6,
+            "name": "Scott, Castillo and Mccann"
+        },
+        "position": "Press photographer",
+        "is_manager": False,
+        "manager": {
+            "id": 19,
+            "first_name": "Scott",
+            "last_name": "Burton"
+        },
+        "hire_date": "2023-07-16"
+    }

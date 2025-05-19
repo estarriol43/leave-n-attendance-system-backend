@@ -20,7 +20,7 @@ def test_create_leave_request():
         "start_date": "2024-12-01",
         "end_date": "2024-12-03",
         "reason": "Unit test",
-        "proxy_user_id": 2
+        "proxy_user_id": 21 
     }, cookies=cookie)
 
     assert response.status_code == 201
