@@ -35,8 +35,8 @@ def request_leave(
         manager_id = user_crud.get_manager_id(db, current_user.id)
         if manager_id != None:
             # then push a notification to his manager
-            title = "New leave request requires your review"
-            message =  str(current_user.first_name) + " " + str(current_user.last_name) + "'s leave request requires your approval."
+            title = "有一筆新假單需要您的審核"
+            message =  str(current_user.first_name) + str(current_user.last_name) + "的假單需要您的審核"
             leave_request_id = result.id
             notification_crud.create_notifications(db, manager_id, title, message, leave_request_id)
             logger.info(f"Successfully send notification to manager whose use_id is: {manager_id}")
@@ -395,8 +395,8 @@ def approve_leave_request(
 
         # push a notification to the user of leave request
         applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
-        title = "Your leave request has been approved!"
-        message = "Congratulations! Your leave request (id: " + str(leave_request_id) + ") has been approved!" 
+        title = "您的假單已被主管批准!"
+        message = "您的假單(id: " + str(leave_request_id) + ")已被批准!" 
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
@@ -432,8 +432,8 @@ def reject_leave_request(
 
         # push a notification to the user of leave request
         applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
-        title = "Your leave request has been rejected."
-        message = "Oops! Your leave request (id: " + str(leave_request_id) + ") has been rejected." 
+        title = "您的假單已被否決"
+        message = "您的假單(id: " + str(leave_request_id) + ")已被否決" 
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
