@@ -437,6 +437,12 @@ def approve_leave_request(
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+        # push a notification to proxy user of the leave request
+        proxy_user_id = leave_crud.get_proxy_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "您已被指派為假單的職務代理人"
+        message = "您已被指派為假單(id: " + str(leave_request_id) + ")的職務代理人。"
+        notification_crud.create_notifications(db, proxy_user_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to proxy user whose use_id is: {proxy_user_id}")
 
         return result
     except ValueError as e:
