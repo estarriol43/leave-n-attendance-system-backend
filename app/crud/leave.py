@@ -168,7 +168,7 @@ def get_team_leave_requests(
     if status and status not in ALLOWED_STATUSES:
         raise ValueError(f"Invalid status: '{status}'. Must be one of {ALLOWED_STATUSES}")
 
-    # get list of user_id for team member of that manaber
+    # get list of user_id for team member of that manager
     subquery = db.query(Manager.user_id).filter(Manager.manager_id == manager_id)
     team_user_ids = [row[0] for row in subquery.all()]
 
@@ -235,6 +235,13 @@ def get_leave_request_by_id(db: Session, leave_request_id: int) -> LeaveRequestD
 
 def get_user_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
     leave_request = db.query(LeaveRequest.user_id).filter(LeaveRequest.id == leave_request_id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
+def get_proxy_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
+    leave_request = db.query(LeaveRequest.proxy_user_id).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     

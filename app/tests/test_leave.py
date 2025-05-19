@@ -20,7 +20,7 @@ def test_create_leave_request():
         "start_date": "2024-12-01",
         "end_date": "2024-12-03",
         "reason": "Unit test",
-        "proxy_user_id": 2
+        "proxy_user_id": 21 
     }, cookies=cookie)
 
     assert response.status_code == 201
@@ -65,3 +65,31 @@ def test_list_team_leave_requests():
     assert isinstance(data["leave_requests"], list)
     assert "pagination" in data
     assert "user" in data["leave_requests"][0]
+    
+    # test with all query parameter
+    response = client.get("/api/leave-requests/team?status=pending&start_date=2024-12-01&end_date=2024-12-10&page=1&per_page=10", cookies=cookie)
+    assert response.status_code == 200
+    data = response.json()
+    assert "leave_requests" in data
+    assert isinstance(data["leave_requests"], list)
+    assert "pagination" in data
+
+
+def test_list_pending_leave_requests():
+    # login as manager (user id: 19)
+    cookie = login_as("jessicavalentine@example.org", "test")    
+    # test without any query parameter
+    response = client.get("/api/leave-requests/pending", cookies=cookie)
+    assert response.status_code == 200
+    data = response.json()
+    assert "leave_requests" in data
+    assert isinstance(data["leave_requests"], list)
+    assert "pagination" in data
+
+    # test with all query parameter
+    response = client.get("/api/leave-requests/pending?start_date=2024-12-01&end_date=2024-12-10&page=1&per_page=10", cookies=cookie)
+    assert response.status_code == 200
+    data = response.json()
+    assert "leave_requests" in data
+    assert isinstance(data["leave_requests"], list)
+    assert "pagination" in data
