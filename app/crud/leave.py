@@ -168,7 +168,7 @@ def get_team_leave_requests(
     if status and status not in ALLOWED_STATUSES:
         raise ValueError(f"Invalid status: '{status}'. Must be one of {ALLOWED_STATUSES}")
 
-    # get list of user_id for team member of that manaber
+    # get list of user_id for team member of that manager
     subquery = db.query(Manager.user_id).filter(Manager.manager_id == manager_id)
     team_user_ids = [row[0] for row in subquery.all()]
 
