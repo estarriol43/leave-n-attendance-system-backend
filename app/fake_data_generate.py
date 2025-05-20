@@ -96,6 +96,41 @@ def reset_manager_relations(db: Session):
 
     db.commit()
 
+def reset_proxy_relations(db: Session):
+    print("Reset proxy relation in leave request")
+    leave_requests = db.query(LeaveRequest).order_by(LeaveRequest.id).all()
+    if not leave_requests:
+        raise ValueError("No leave requests available to assign proxy.")
+    manager_relations = db.query(Manager).all()
+    if not manager_relations:
+        raise ValueError("No manager relations available to assign proxy.")
+    
+    user_id = []
+    teams = {}
+    for relation in manager_relations:
+        if relation.manager_id not in teams:
+            teams[relation.manager_id] = []
+        teams[relation.manager_id].append(relation.user_id)
+    print("teams: ", teams)
+    for i in range(21):
+        curr_user = leave_requests[i].user_id
+        curr_approver = leave_requests[i].approver_id
+        print("curr_user: ", curr_user)
+        print("curr_approver: ", curr_approver)
+        print("teams[curr_approver]: ", teams[curr_approver])
+        while 1:
+            proxy = fake.random_element(elements=teams[curr_approver])
+            if proxy != curr_user:
+                leave_requests[i].proxy_user_id = proxy
+                print(f"Leave request {leave_requests[i].id} proxy user set to {proxy}")
+                db.add(leave_requests[i])
+                break
+
+    db.commit()
+         
+        
+
+
 
 
 def generate_fake_leave_types(db: Session, num_leave_types: int = 5):
@@ -299,7 +334,8 @@ def init_db():
     try:
         # generate_fake_departments(db)
         # generate_fake_users(db)
-        reset_manager_relations(db)
+        # reset_manager_relations(db)
+        reset_proxy_relations(db)
         # generate_fake_leave_types(db)
         # generate_fake_leave_quotas(db)
         # generate_fake_leave_requests(db)
