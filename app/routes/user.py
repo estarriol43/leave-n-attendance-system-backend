@@ -78,8 +78,8 @@ def get_teammate(request: Request, current_user: User = Depends(get_current_user
     logger.info(f"User {current_user.email} (ID: {current_user.id}) requesting team list from {client_ip}")
     
     manager_id = user_crud.get_manager_id(db, current_user.id)
-    
-    members = user_crud.get_team_members(db, manager_id)
+
+    members = user_crud.get_team_members(db, manager_id, current_user.id)
     
     # 記錄團隊成員信息，但避免記錄敏感信息
     member_count = len(members) if members else 0
@@ -104,7 +104,7 @@ def get_subordinates(request: Request, current_user: User = Depends(get_current_
         logger.warning(f"Non-manager user {current_user.email} (ID: {current_user.id}) attempted to access team list")
         raise HTTPException(status_code=403, detail="Only managers can access this resource.")
     
-    members = user_crud.get_team_members(db, current_user.id)
+    members = user_crud.get_team_members(db, current_user.id, current_user.id)
     
     # 記錄團隊成員信息，但避免記錄敏感信息
     member_count = len(members) if members else 0
