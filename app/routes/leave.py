@@ -432,8 +432,9 @@ def approve_leave_request(
 
         # push a notification to the user of leave request
         applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
+        l_id = leave_crud.get_request_id_from_leave_request_by_id(db, leave_request_id)[0]
         title = "您的假單已被主管批准!"
-        message = "您的假單(id: " + str(leave_request_id) + ")已被批准!" 
+        message = "您的假單(id: " + str(l_id) + ")已被批准!" 
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
