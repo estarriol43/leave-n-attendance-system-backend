@@ -35,8 +35,8 @@ def request_leave(
         manager_id = user_crud.get_manager_id(db, current_user.id)
         if manager_id != None:
             # then push a notification to his manager
-            title = "New leave request requires your review"
-            message =  str(current_user.first_name) + " " + str(current_user.last_name) + "'s leave request requires your approval."
+            title = "有一筆新假單需要您的審核"
+            message =  str(current_user.first_name) + str(current_user.last_name) + "的假單需要您的審核"
             leave_request_id = result.id
             notification_crud.create_notifications(db, manager_id, title, message, leave_request_id)
             logger.info(f"Successfully send notification to manager whose use_id is: {manager_id}")
@@ -54,6 +54,7 @@ def list_my_leave_requests(
     status: Optional[str] = Query(None, description="Filter by status (pending, approved, rejected)"),
     start_date: Optional[date] = Query(None, description="Filter by start date (YYYY-MM-DD)"),
     end_date: Optional[date] = Query(None, description="Filter by end date (YYYY-MM-DD)"),
+    leave_type_id: Optional[int] = Query(None, description="Filter by leave type ID"),
     page: Optional[int] = Query(1, ge=1, description="Page number"),
     per_page: Optional[int] = Query(10, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db),
@@ -65,7 +66,7 @@ def list_my_leave_requests(
     client_ip = request.client.host
     logger.info(f"User {current_user.email} (ID: {current_user.id}) requesting leave list from {client_ip}")
     logger.info(f"RAW Request parameters: {dict(request.query_params)}")
-    logger.debug(f"Processed parameters: status={status}, start_date={start_date}, end_date={end_date}, page={page}, per_page={per_page}")
+    logger.debug(f"Processed parameters: status={status}, start_date={start_date}, end_date={end_date}, leave_type_id={leave_type_id}, page={page}, per_page={per_page}")
     
     # 設定默認值
     try:
@@ -112,8 +113,19 @@ def list_my_leave_requests(
                 logger.warning(f"Invalid status value: {status}, must be one of pending, approved, rejected")
             else:
                 actual_status = status
+                
+        # 處理 leave_type_id 參數
+        actual_leave_type_id = None
+        if leave_type_id is not None:
+            try:
+                actual_leave_type_id = int(leave_type_id)
+                if actual_leave_type_id < 1:
+                    logger.warning(f"Invalid leave_type_id: {leave_type_id}, must be a positive integer")
+                    actual_leave_type_id = None
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid leave_type_id parameter: {leave_type_id}")
 
-        logger.debug(f"Final parameters: status={actual_status}, start_date={actual_start_date}, end_date={actual_end_date}, page={actual_page}, per_page={actual_per_page}")
+        logger.debug(f"Final parameters: status={actual_status}, start_date={actual_start_date}, end_date={actual_end_date}, leave_type_id={actual_leave_type_id}, page={actual_page}, per_page={actual_per_page}")
         
         # 使用安全的參數呼叫 CRUD 方法
         result = leave_crud.get_leave_requests_for_user(
@@ -122,6 +134,7 @@ def list_my_leave_requests(
             status=actual_status,
             start_date=actual_start_date,
             end_date=actual_end_date,
+            leave_type_id=actual_leave_type_id,
             page=actual_page,
             per_page=actual_per_page,
         )
@@ -170,10 +183,12 @@ def list_my_leave_requests(
 @router.get("/team", response_model=LeaveRequestTeamListResponse)
 def list_team_leave_requests(
     request: Request,
-    user_id: Optional[int] = Query(None, description="Target user ID"),
+    user_id: Optional[int] = Query(None, description="Target user ID (deprecated, use employee_id instead)"),
+    employee_id: Optional[int] = Query(None, description="Target employee ID"),
     status: Optional[str] = Query(None, description="Filter by status (pending, approved, rejected)"),
     start_date: Optional[date] = Query(None, description="Filter by start date (YYYY-MM-DD)"),
     end_date: Optional[date] = Query(None, description="Filter by end date (YYYY-MM-DD)"),
+    leave_type_id: Optional[int] = Query(None, description="Filter by leave type ID"),
     page: Optional[int] = Query(1, ge=1, description="Page number"),
     per_page: Optional[int] = Query(10, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db),
@@ -200,13 +215,16 @@ def list_team_leave_requests(
         }
     
     try:
+        # Prioritize employee_id over user_id if both are provided
+        target_id = employee_id if employee_id is not None else user_id
+        
         # 確保參數類型正確
         actual_user_id = None
-        if user_id is not None:
+        if target_id is not None:
             try:
-                actual_user_id = int(user_id)
+                actual_user_id = int(target_id)
             except (ValueError, TypeError):
-                logger.warning(f"Invalid user_id parameter: {user_id}")
+                logger.warning(f"Invalid user/employee ID parameter: {target_id}")
         
         actual_page = 1
         if page is not None:
@@ -253,7 +271,18 @@ def list_team_leave_requests(
             else:
                 actual_status = status
 
-        logger.debug(f"Final parameters: user_id={actual_user_id}, status={actual_status}, start_date={actual_start_date}, end_date={actual_end_date}, page={actual_page}, per_page={actual_per_page}")
+        # 處理 leave_type_id 參數
+        actual_leave_type_id = None
+        if leave_type_id is not None:
+            try:
+                actual_leave_type_id = int(leave_type_id)
+                if actual_leave_type_id < 1:
+                    logger.warning(f"Invalid leave_type_id: {leave_type_id}, must be a positive integer")
+                    actual_leave_type_id = None
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid leave_type_id parameter: {leave_type_id}")
+
+        logger.debug(f"Final parameters: user_id={actual_user_id}, status={actual_status}, start_date={actual_start_date}, end_date={actual_end_date}, leave_type_id={actual_leave_type_id}, page={actual_page}, per_page={actual_per_page}")
             
         result = leave_crud.get_team_leave_requests(
             db=db,
@@ -262,6 +291,7 @@ def list_team_leave_requests(
             status=actual_status,
             start_date=actual_start_date,
             end_date=actual_end_date,
+            leave_type_id=actual_leave_type_id,
             page=actual_page,
             per_page=actual_per_page
         )
@@ -321,7 +351,9 @@ def list_team_leave_requests(
 
 @router.get("/pending", response_model=LeaveRequestTeamListResponse)
 def list_pending_leave_requests(
-    user_id: Optional[int] = Query(None, description="target user_id"),
+    user_id: Optional[int] = Query(None, description="Target user ID (deprecated, use employee_id instead)"),
+    employee_id: Optional[int] = Query(None, description="Target employee ID"),
+    leave_type_id: Optional[int] = Query(None, description="Filter by leave type ID"),
     page: Optional[int] = Query(1, ge = 1),
     per_page: Optional[int] = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -334,11 +366,15 @@ def list_pending_leave_requests(
         raise HTTPException(status_code=403, detail="Access restricted to managers.")
     
     try:
+        # Prioritize employee_id over user_id if both are provided
+        target_id = employee_id if employee_id is not None else user_id
+        
         result = leave_crud.get_team_leave_requests(
             db=db,
             manager_id=current_user.id,
-            user_id=user_id,
+            user_id=target_id,
             status="pending",
+            leave_type_id=leave_type_id,
             page=page,
             per_page=per_page
         )
@@ -390,16 +426,23 @@ def approve_leave_request(
     """
     Approve a leave request. Only managers can approve leave requests for their team members.
     """
+    
     try:
         result = leave_crud.approve_leave_request(db, leave_request_id, current_user.id)
 
         # push a notification to the user of leave request
         applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
-        title = "Your leave request has been approved!"
-        message = "Congratulations! Your leave request (id: " + str(leave_request_id) + ") has been approved!" 
+        title = "您的假單已被主管批准!"
+        message = "您的假單(id: " + str(leave_request_id) + ")已被批准!" 
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+        # push a notification to proxy user of the leave request
+        proxy_user_id = leave_crud.get_proxy_id_from_leave_request_by_id(db, leave_request_id)[0]
+        title = "您已被指派為假單的職務代理人"
+        message = "您已被指派為假單(id: " + str(leave_request_id) + ")的職務代理人。"
+        notification_crud.create_notifications(db, proxy_user_id, title, message, leave_request_id)
+        logger.info(f"Successfully send notification to proxy user whose use_id is: {proxy_user_id}")
 
         return result
     except ValueError as e:
@@ -432,8 +475,8 @@ def reject_leave_request(
 
         # push a notification to the user of leave request
         applicant_id = leave_crud.get_user_id_from_leave_request_by_id(db, leave_request_id)[0]
-        title = "Your leave request has been rejected."
-        message = "Oops! Your leave request (id: " + str(leave_request_id) + ") has been rejected." 
+        title = "您的假單已被否決"
+        message = "您的假單(id: " + str(leave_request_id) + ")已被否決" 
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")

@@ -98,6 +98,7 @@ def get_leave_requests_for_user(
     status: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    leave_type_id: Optional[int] = None,
     page: int = 1,
     per_page: int = 10
 ):
@@ -118,6 +119,9 @@ def get_leave_requests_for_user(
 
     if end_date:
         query = query.filter(LeaveRequest.end_date <= end_date)
+        
+    if leave_type_id:
+        query = query.filter(LeaveRequest.leave_type_id == leave_type_id)
 
     total = query.count()
     results = query.order_by(LeaveRequest.start_date.desc()) \
@@ -157,13 +161,14 @@ def get_team_leave_requests(
     status: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    leave_type_id: Optional[int] = None,
     page: int = 1,
     per_page: int = 10
 ):
     if status and status not in ALLOWED_STATUSES:
         raise ValueError(f"Invalid status: '{status}'. Must be one of {ALLOWED_STATUSES}")
 
-    # get list of user_id for team member of that manaber
+    # get list of user_id for team member of that manager
     subquery = db.query(Manager.user_id).filter(Manager.manager_id == manager_id)
     team_user_ids = [row[0] for row in subquery.all()]
 
@@ -186,6 +191,8 @@ def get_team_leave_requests(
         query = query.filter(LeaveRequest.start_date >= start_date)
     if end_date:
         query = query.filter(LeaveRequest.end_date <= end_date)
+    if leave_type_id:
+        query = query.filter(LeaveRequest.leave_type_id == leave_type_id)
 
     total = query.count()
     results = query.order_by(LeaveRequest.start_date.desc()) \
@@ -228,6 +235,13 @@ def get_leave_request_by_id(db: Session, leave_request_id: int) -> LeaveRequestD
 
 def get_user_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
     leave_request = db.query(LeaveRequest.user_id).filter(LeaveRequest.id == leave_request_id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
+def get_proxy_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
+    leave_request = db.query(LeaveRequest.proxy_user_id).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     

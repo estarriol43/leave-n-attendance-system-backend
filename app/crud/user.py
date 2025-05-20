@@ -5,6 +5,7 @@ from typing import List
 from ..models.user import User
 from ..models.department import Department
 from ..models.manager import Manager
+from sqlalchemy.orm import joinedload
 
 def get_user_by_email(db: Session, email: str):
     res = db.query(User).filter(User.email == email).first()
@@ -31,8 +32,9 @@ def get_team_members(db: Session, manager_id: int) -> List[User]:
     if not team_member_ids:
         return []
     
-    # get user profile based on team_member_ids list
-    return db.query(User).filter(User.id.in_(team_member_ids)).all()
+    # get user profile based on team_member_ids list including department
+    # Use joinedload to explicitly load the department relationship
+    return db.query(User).options(joinedload(User.department)).filter(User.id.in_(team_member_ids)).all()
 
 def get_manager_id(db: Session, user_id: int):
     # get manager_id firstly:
