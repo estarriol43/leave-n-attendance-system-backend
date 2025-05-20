@@ -23,6 +23,10 @@ def authenticate_user(db: Session, email: str, password: str):
 def get_user_by_id(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
+def get_user_name_by_id(db: Session, user_id: int):
+    return db.query(User.first_name, User.last_name).filter(User.id == user_id).first()
+
+
 def get_team_members(db: Session, manager_id: int) -> List[User]:
     # get all user_id of team members whose manager is current user
     team_member_ids = db.scalars(

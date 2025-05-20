@@ -438,10 +438,17 @@ def approve_leave_request(
         leave_request_id = leave_request_id 
         notification_crud.create_notifications(db, applicant_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to applicant whose use_id is: {applicant_id}")
+
         # push a notification to proxy user of the leave request
-        proxy_user_id = leave_crud.get_proxy_id_from_leave_request_by_id(db, leave_request_id)[0]
+        # proxy_user_id = leave_crud.get_proxy_id_from_leave_request_by_id(db, leave_request_id)[0]
+        detail = leave_crud.get_detail_from_leave_request_by_id(db, leave_request_id)
+        proxy_user_id = detail[0]
+        start_date = detail[1]
+        end_date = detail[2]
+        (applicant_first_name, applicant_last_name) = user_crud.get_user_name_by_id(db, applicant_id)
+
         title = "您已被指派為假單的職務代理人"
-        message = "您已被指派為假單(id: " + str(leave_request_id) + ")的職務代理人。"
+        message = "您已被指派於" + str(start_date) + "至" + str(end_date) + "擔任" + str(applicant_first_name) + str(applicant_last_name) + "的職務代理人。"
         notification_crud.create_notifications(db, proxy_user_id, title, message, leave_request_id)
         logger.info(f"Successfully send notification to proxy user whose use_id is: {proxy_user_id}")
 

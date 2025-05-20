@@ -254,6 +254,13 @@ def get_proxy_id_from_leave_request_by_id(db: Session, leave_request_id: int) ->
     
     return leave_request
 
+def get_detail_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
+    leave_request = db.query(LeaveRequest.proxy_user_id, LeaveRequest.start_date, LeaveRequest.end_date).filter(LeaveRequest.id == leave_request_id ).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
 def approve_leave_request(db: Session, leave_request_id: int, approver_id: int) -> LeaveRequestApprovalResponse:
     leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == leave_request_id).first()
     if not leave_request:
