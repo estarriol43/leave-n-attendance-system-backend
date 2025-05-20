@@ -1,9 +1,8 @@
 name: Build and Deploy to Cloud Run
 
 on:
-  push:
-    tags:
-      - 'release-*'
+  release:
+    types: [published]
 
 jobs:
   setup-build-publish-deploy:
@@ -14,6 +13,8 @@ jobs:
     steps:
     - name: 'Checkout'
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.release.tag_name }}
 
     - name: 'Authenticate to Google Cloud'
       uses: 'google-github-actions/auth@v2'
