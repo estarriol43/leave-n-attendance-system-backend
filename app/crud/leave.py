@@ -17,9 +17,28 @@ def generate_request_id():
     id = str(uuid4().hex[:16].upper())
     return id
 
+def calculate_leave_days_excluding_weekends(start_date: date, end_date: date) -> int:
+    if start_date > end_date:
+        raise ValueError("Invalid date: End_date should be after Start_day") 
+
+    total_days = (end_date - start_date).days + 1
+    full_weeks = total_days // 7
+    weekend_days = full_weeks * 2
+
+    extra_days = total_days % 7
+    start_weekday = start_date.weekday()
+
+    for i in range(extra_days):
+        if (start_weekday + i) % 7 >= 5:  # 週六或週日
+            weekend_days += 1
+
+    return total_days - weekend_days
+
+
 def create_leave_request(db: Session, user_id: int, data: LeaveRequestCreate):
     # 計算請假天數（整天制）
-    days_requested = (data.end_date - data.start_date).days + 1
+    # days_requested = (data.end_date - data.start_date).days + 1
+    days_requested = calculate_leave_days_excluding_weekends(data.start_date, data.end_date)
     current_year = datetime.now().year
     if days_requested <= 0:
         raise ValueError("Invalid date: End_date should be after Start_day") 
@@ -240,8 +259,22 @@ def get_user_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> 
     
     return leave_request
 
+def get_request_id_from_leave_request_by_id(db: Session, id: int) -> int:
+    leave_request = db.query(LeaveRequest.request_id).filter(LeaveRequest.id == id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
 def get_proxy_id_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
     leave_request = db.query(LeaveRequest.proxy_user_id).filter(LeaveRequest.id == leave_request_id).first()
+    if not leave_request:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+    
+    return leave_request
+
+def get_detail_from_leave_request_by_id(db: Session, leave_request_id: int) -> int:
+    leave_request = db.query(LeaveRequest.proxy_user_id, LeaveRequest.start_date, LeaveRequest.end_date).filter(LeaveRequest.id == leave_request_id ).first()
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found")
     

@@ -32,7 +32,7 @@ def test_create_leave_request():
     assert "end_date" in data
     assert isinstance(data["reason"], str) 
     assert data["status"] == "pending"
-    assert data["days_count"] == 3
+    assert data["days_count"] == 2 
     assert "proxy_person" in data
 
 def test_list_my_leave_requests():

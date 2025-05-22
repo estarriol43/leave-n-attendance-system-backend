@@ -1,15 +1,14 @@
-name: Build and Deploy to Cloud Run
+name: '[TEST] Build and Deploy to Cloud Run'
 
 on:
   push:
-    tags:
-      - 'release-*'
+    branches: [ main, master ]
 
 jobs:
   setup-build-publish-deploy:
     name: Setup, Build, Publish, and Deploy
     runs-on: ubuntu-latest
-    environment: production
+    environment: test-gcp
 
     steps:
     - name: 'Checkout'
@@ -31,7 +30,7 @@ jobs:
 
     - name: 'Build Docker Image'
       run: |-
-        docker build --tag '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}' .
+        docker build -f Dockerfile.test --tag '${{ vars.REGISTRY_ZONE }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ vars.REGISTRY_NAME }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}' .
 
     - name: 'Push Docker Image to Artifact Registry'
       run: |-
