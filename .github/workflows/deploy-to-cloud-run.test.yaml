@@ -45,3 +45,4 @@ jobs:
         flags: '--network=${{ vars.VPC }} --subnet=${{ vars.VPC_SUBNET }} --port 8000'
         env_vars: |-
           DATABASE_URL=${{ secrets.DATABASE_URL }}
+          BUCKET_KEY=${{ secrets.BUCKET_KEY }}
